@@ -20,7 +20,44 @@ struct iPhoneAutomationView: View {
         NavigationView {
             // Sidebar
             List {
-                Section("Connection Status") {
+                // Permission Status
+                if !automation.hasAccessibilityPermission && automation.permissionCheckComplete {
+                    Section("⚠️ Permission Required") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Accessibility permission is required for automation")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                            
+                            Button("Grant Permission") {
+                                automation.requestAccessibilityPermission()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            
+                            Text("After granting, restart the app")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+                
+                Section("Status") {
+                    // Accessibility Permission
+                    HStack {
+                        Circle()
+                            .fill(automation.hasAccessibilityPermission ? Color.green : Color.orange)
+                            .frame(width: 10, height: 10)
+                        Text(automation.hasAccessibilityPermission ? "Accessibility Granted" : "Accessibility Required")
+                        Spacer()
+                        if !automation.hasAccessibilityPermission {
+                            Button("Grant") {
+                                automation.requestAccessibilityPermission()
+                            }
+                            .font(.caption)
+                        }
+                    }
+                    
+                    // iPhone Connection
                     HStack {
                         Circle()
                             .fill(automation.isConnected ? Color.green : Color.red)
@@ -28,6 +65,7 @@ struct iPhoneAutomationView: View {
                         Text(automation.isConnected ? "iPhone Connected" : "iPhone Not Connected")
                         Spacer()
                         Button("Refresh") {
+                            automation.checkAccessibilityPermission()
                             _ = automation.detectiPhoneMirroring()
                         }
                     }
@@ -42,12 +80,12 @@ struct iPhoneAutomationView: View {
                     Button(action: executeHome) {
                         Label("Home", systemImage: "house")
                     }
-                    .disabled(!automation.isConnected)
+                    .disabled(!automation.isConnected || !automation.hasAccessibilityPermission)
                     
                     Button(action: executeAppSwitcher) {
                         Label("App Switcher", systemImage: "square.stack.3d.up")
                     }
-                    .disabled(!automation.isConnected)
+                    .disabled(!automation.isConnected || !automation.hasAccessibilityPermission)
                     
                     Button(action: captureScreenshot) {
                         Label("Capture Screenshot", systemImage: "camera")
@@ -66,7 +104,7 @@ struct iPhoneAutomationView: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                        .disabled(!automation.isConnected || isRunning)
+                        .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || isRunning)
                     }
                 }
             }
@@ -87,7 +125,7 @@ struct iPhoneAutomationView: View {
                             Button("Tap") {
                                 executeCustomTap()
                             }
-                            .disabled(!automation.isConnected)
+                            .disabled(!automation.isConnected || !automation.hasAccessibilityPermission)
                         }
                         
                         HStack {
@@ -96,7 +134,12 @@ struct iPhoneAutomationView: View {
                             Button("Type") {
                                 executeTypeText()
                             }
-                            .disabled(!automation.isConnected || customText.isEmpty)
+                            .disabled(!automation.isConnected || customText.isEmpty || !automation.hasAccessibilityPermission)
+                            
+                            Button("Paste") {
+                                executePasteText()
+                            }
+                            .disabled(!automation.isConnected || customText.isEmpty || !automation.hasAccessibilityPermission)
                         }
                         
                         HStack {
@@ -148,7 +191,13 @@ struct iPhoneAutomationView: View {
         }
         .navigationTitle("iPhone Automation")
         .onAppear {
+            automation.checkAccessibilityPermission()
             _ = automation.detectiPhoneMirroring()
+            
+            // Set up timer to check permission status
+            Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
+                automation.checkAccessibilityPermission()
+            }
         }
     }
     
@@ -194,6 +243,11 @@ struct iPhoneAutomationView: View {
     
     private func executeTypeText() {
         automation.typeText(customText)
+        customText = ""
+    }
+    
+    private func executePasteText() {
+        automation.pasteText(customText)
         customText = ""
     }
     
