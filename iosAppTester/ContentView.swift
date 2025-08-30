@@ -22,6 +22,13 @@ struct ContentView: View {
                 }
                 .tag(0)
             
+            // iPhone Automation Tab
+            iPhoneAutomationView(screenshotManager: screenshotManager)
+                .tabItem {
+                    Label("iPhone", systemImage: "iphone")
+                }
+                .tag(1)
+            
             // Scenarios Tab
             ScenariosView(scenarioManager: scenarioManager)
                 .tabItem {
