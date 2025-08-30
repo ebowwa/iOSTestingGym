@@ -320,6 +320,8 @@ class iPhoneAutomation: ObservableObject {
     }
     
     // Alternative: Use paste with direct CGEvent
+    // NOTE: iPhone Mirroring requires explicit Command key press/release sequence
+    // The .maskCommand flag alone doesn't work - outputs 'v' instead of pasting
     func pasteText(_ text: String) {
         guard hasAccessibilityPermission else {
             log("❌ Cannot paste - accessibility permission required")
@@ -357,33 +359,31 @@ class iPhoneAutomation: ObservableObject {
             Thread.sleep(forTimeInterval: 0.2)
         }
         
-        // Use direct CGEvent for Cmd+V - need to press Cmd first, then V
+        // Use the sequence: Press Cmd, Press V, Release V, Release Cmd
         let source = CGEventSource(stateID: .combinedSessionState)
         
-        // Press Command key first
-        if let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: 55, keyDown: true) { // Command key (55)
+        // 1. Press Command key
+        if let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: 55, keyDown: true) { // Command key
             cmdDown.post(tap: .cghidEventTap)
         }
         
-        Thread.sleep(forTimeInterval: 0.05)
+        Thread.sleep(forTimeInterval: 0.02)
         
-        // Then press V while Command is held
+        // 2. Press V key (without flag since Cmd is already pressed)
         if let vDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true) { // V key
-            vDown.flags = .maskCommand
             vDown.post(tap: .cghidEventTap)
         }
         
-        Thread.sleep(forTimeInterval: 0.05)
+        Thread.sleep(forTimeInterval: 0.02)
         
-        // Release V
+        // 3. Release V key
         if let vUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false) {
-            vUp.flags = .maskCommand
             vUp.post(tap: .cghidEventTap)
         }
         
-        Thread.sleep(forTimeInterval: 0.05)
+        Thread.sleep(forTimeInterval: 0.02)
         
-        // Release Command
+        // 4. Release Command key
         if let cmdUp = CGEvent(keyboardEventSource: source, virtualKey: 55, keyDown: false) {
             cmdUp.post(tap: .cghidEventTap)
         }
