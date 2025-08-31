@@ -129,6 +129,18 @@ struct iPhoneAutomationView: View {
                 )
                 .padding(.vertical, 4)
                 
+                // Action Recorder Section
+                DisclosureGroup("Action Recorder", isExpanded: .constant(true)) {
+                    ActionRecorderView(automation: automation)
+                }
+                .padding(.vertical, 4)
+                
+                // Toolbar Calibration Section
+                DisclosureGroup("Toolbar Calibration") {
+                    ToolbarCalibrationView(automation: automation)
+                }
+                .padding(.vertical, 4)
+                
                 DisclosureGroup("Touchpad Control", isExpanded: $touchpadExpanded) {
                     TouchpadView(automation: automation, isExpanded: $touchpadExpanded)
                         .frame(height: 300)

@@ -371,8 +371,9 @@ class iPhoneAutomation: ObservableObject {
         Thread.sleep(forTimeInterval: 0.5)
         
         // Step 2: Click the Home button in the toolbar  
-        // The Home button is slightly left of mathematical center
-        let homeButtonX = (windowBounds.width / 2) - 15  // 15 pixels left of center
+        // Based on 372px window width, buttons are roughly:
+        // Back: ~30px, Home: ~155px, AppSwitcher: ~195px, More: ~340px
+        let homeButtonX: CGFloat = 155  // Actual position for 372px width
         let homeButtonY: CGFloat = 30  // In the toolbar area
         
         let clickPoint = CGPoint(
