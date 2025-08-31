@@ -8,13 +8,26 @@
 import SwiftUI
 
 struct iPhoneAutomationView: View {
-    @StateObject private var automation = iPhoneAutomation()
+    @ObservedObject var automation: iPhoneAutomation
     @ObservedObject var screenshotManager: ScreenshotManager
+    
+    init(screenshotManager: ScreenshotManager, automation: iPhoneAutomation? = nil) {
+        self.screenshotManager = screenshotManager
+        self.automation = automation ?? iPhoneAutomation()
+    }
     @State private var selectedScenario: iPhoneTestScenario?
     @State private var isRunning = false
     @State private var customX: String = "200"
     @State private var customY: String = "400"
     @State private var customText: String = ""
+    
+    // Disclosure Group expansion states
+    @State private var statusExpanded = true
+    @State private var quickActionsExpanded = false
+    @State private var touchpadExpanded = false
+    @State private var scenariosExpanded = false
+    @State private var customControlsExpanded = false
+    @State private var automationLogExpanded = false
     
     var body: some View {
         NavigationView {
@@ -41,7 +54,7 @@ struct iPhoneAutomationView: View {
                     }
                 }
                 
-                Section("Status") {
+                DisclosureGroup("Status", isExpanded: $statusExpanded) {
                     // Accessibility Permission
                     HStack {
                         Circle()
@@ -70,13 +83,42 @@ struct iPhoneAutomationView: View {
                         }
                     }
                     
+                    // Connection Quality
+                    if automation.isConnected {
+                        HStack {
+                            Text("\(automation.connectionQuality.color)")
+                                .font(.system(size: 14))
+                            Text("Connection: \(automation.connectionQuality.rawValue)")
+                                .font(.caption)
+                                .foregroundColor(connectionQualityColor(for: automation.connectionQuality))
+                            if automation.lastResponseTime > 0 {
+                                Text("(\(Int(automation.lastResponseTime))ms)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Button("Test") {
+                                automation.testConnectionQuality()
+                            }
+                            .font(.caption)
+                        }
+                    }
+                    
                     if automation.isConnected {
                         Label(automation.deviceName, systemImage: "iphone")
                             .foregroundColor(.secondary)
                     }
                 }
+                .padding(.vertical, 4)
                 
-                Section("Quick Actions") {
+                DisclosureGroup("Quick Actions", isExpanded: $quickActionsExpanded) {
+                    Button(action: {
+                        automation.ensureWindowFocused()
+                    }) {
+                        Label("Focus Window", systemImage: "macwindow.on.rectangle")
+                    }
+                    .disabled(!automation.isConnected || !automation.hasAccessibilityPermission)
+                    
                     Button(action: executeHome) {
                         Label("Home", systemImage: "house")
                     }
@@ -92,8 +134,16 @@ struct iPhoneAutomationView: View {
                     }
                     .disabled(!automation.isConnected)
                 }
+                .padding(.vertical, 4)
                 
-                Section("Test Scenarios") {
+                DisclosureGroup("Touchpad Control", isExpanded: $touchpadExpanded) {
+                    TouchpadView(automation: automation)
+                        .frame(height: 300)
+                        .padding(.vertical, 4)
+                }
+                .padding(.vertical, 4)
+                
+                DisclosureGroup("Test Scenarios", isExpanded: $scenariosExpanded) {
                     ForEach(iPhoneTestScenario.defaultScenarios) { scenario in
                         Button(action: { runScenario(scenario) }) {
                             VStack(alignment: .leading) {
@@ -114,7 +164,7 @@ struct iPhoneAutomationView: View {
             // Main Content
             VStack {
                 // Custom Controls
-                GroupBox("Custom Controls") {
+                DisclosureGroup("Custom Controls", isExpanded: $customControlsExpanded) {
                     VStack(spacing: 15) {
                         HStack {
                             Text("Tap Location:")
@@ -142,29 +192,56 @@ struct iPhoneAutomationView: View {
                             .disabled(!automation.isConnected || customText.isEmpty || !automation.hasAccessibilityPermission)
                         }
                         
-                        HStack {
-                            Text("Swipe:")
-                            Button("Up") {
-                                executeSwipe(direction: .up)
+                        VStack(spacing: 10) {
+                            // Directional controls with center click
+                            HStack {
+                                Text("Controls:")
+                                Spacer()
                             }
-                            Button("Down") {
-                                executeSwipe(direction: .down)
-                            }
-                            Button("Left") {
-                                executeSwipe(direction: .left)
-                            }
-                            Button("Right") {
-                                executeSwipe(direction: .right)
+                            
+                            HStack(spacing: 20) {
+                                // Left side - swipe controls
+                                VStack(spacing: 5) {
+                                    Button("↑") {
+                                        executeSwipe(direction: .up)
+                                    }
+                                    .frame(width: 40, height: 30)
+                                    
+                                    HStack(spacing: 5) {
+                                        Button("←") {
+                                            executeSwipe(direction: .left)
+                                        }
+                                        .frame(width: 40, height: 30)
+                                        
+                                        Button("Click") {
+                                            executeClickAtCenter()
+                                        }
+                                        .frame(width: 50, height: 30)
+                                        .buttonStyle(.borderedProminent)
+                                        
+                                        Button("→") {
+                                            executeSwipe(direction: .right)
+                                        }
+                                        .frame(width: 40, height: 30)
+                                    }
+                                    
+                                    Button("↓") {
+                                        executeSwipe(direction: .down)
+                                    }
+                                    .frame(width: 40, height: 30)
+                                }
+                                
+                                Spacer()
                             }
                         }
-                        .disabled(!automation.isConnected)
+                        .disabled(!automation.isConnected || !automation.hasAccessibilityPermission)
                     }
                     .padding()
                 }
                 .padding()
                 
                 // Automation Log
-                GroupBox("Automation Log") {
+                DisclosureGroup("Automation Log", isExpanded: $automationLogExpanded) {
                     ScrollViewReader { proxy in
                         ScrollView {
                             VStack(alignment: .leading, spacing: 4) {
@@ -176,7 +253,7 @@ struct iPhoneAutomationView: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .onChange(of: automation.automationLog.count) { _ in
+                        .onChange(of: automation.automationLog.count) {
                             withAnimation {
                                 proxy.scrollTo(automation.automationLog.count - 1, anchor: .bottom)
                             }
@@ -198,15 +275,37 @@ struct iPhoneAutomationView: View {
             Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
                 automation.checkAccessibilityPermission()
             }
+            
+            // Set up timer to check connection quality
+            Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
+                if automation.isConnected {
+                    automation.testConnectionQuality()
+                }
+            }
         }
     }
     
     private func executeHome() {
-        automation.pressHome()
+        _ = automation.pressHome()
     }
     
     private func executeAppSwitcher() {
-        automation.openAppSwitcher()
+        _ = automation.openAppSwitcher()
+    }
+    
+    private func connectionQualityColor(for quality: iPhoneAutomation.ConnectionQuality) -> Color {
+        switch quality {
+        case .excellent, .good:
+            return .green
+        case .fair:
+            return .yellow
+        case .poor:
+            return .orange
+        case .bad, .disconnected:
+            return .red
+        case .unknown:
+            return .gray
+        }
     }
     
     private func captureScreenshot() {
@@ -241,13 +340,23 @@ struct iPhoneAutomationView: View {
         automation.tapAt(x: x, y: y, in: windowBounds)
     }
     
+    private func executeClickAtCenter() {
+        guard let windowBounds = automation.getiPhoneMirroringWindow() else { return }
+        
+        // Click at the center of the iPhone screen
+        let centerX = windowBounds.width / 2
+        let centerY = windowBounds.height / 2
+        
+        automation.tapAt(x: centerX, y: centerY, in: windowBounds)
+    }
+    
     private func executeTypeText() {
-        automation.typeText(customText)
+        _ = automation.typeText(customText)
         customText = ""
     }
     
     private func executePasteText() {
-        automation.pasteText(customText)
+        _ = automation.pasteText(customText)
         customText = ""
     }
     
@@ -290,6 +399,9 @@ struct iPhoneAutomationView: View {
         
         isRunning = true
         
+        // Ensure window is focused before starting the scenario
+        automation.ensureWindowFocused()
+        
         Task {
             for action in scenario.actions {
                 switch action {
@@ -298,11 +410,13 @@ struct iPhoneAutomationView: View {
                 case .swipe(let from, let to):
                     automation.swipe(from: from, to: to, in: windowBounds)
                 case .typeText(let text):
-                    automation.typeText(text)
+                    _ = automation.typeText(text)
+                case .pasteText(let text):
+                    _ = automation.pasteText(text)
                 case .pressHome:
-                    automation.pressHome()
-                case .appSwitcher:
-                    automation.openAppSwitcher()
+                    _ = automation.pressHome()
+                case .openAppSwitcher:
+                    _ = automation.openAppSwitcher()
                 case .wait(let duration):
                     try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
                 case .screenshot:

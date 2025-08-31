@@ -40,6 +40,12 @@ class KeyboardController {
         // Focus window if closure provided
         focusWindow?()
         
+        // Get iPhone Mirroring process ID
+        guard let windowInfo = WindowDetector.getiPhoneMirroringWindow() else {
+            print("❌ iPhone Mirroring window not found")
+            return false
+        }
+        
         // Use direct key codes approach that worked in testing
         let source = CGEventSource(stateID: .combinedSessionState)
         
@@ -54,14 +60,16 @@ class KeyboardController {
                 // Also set the unicode string for better compatibility
                 let utf16 = Array(String(char).utf16)
                 keyDown.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
-                keyDown.post(tap: .cghidEventTap)
+                // Post directly to iPhone Mirroring process
+                keyDown.postToPid(windowInfo.processID)
             }
             
             Thread.sleep(forTimeInterval: 0.05)
             
             // Create key up event
             if let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) {
-                keyUp.post(tap: .cghidEventTap)
+                // Post directly to iPhone Mirroring process
+                keyUp.postToPid(windowInfo.processID)
             }
             
             Thread.sleep(forTimeInterval: 0.1)
@@ -75,10 +83,30 @@ class KeyboardController {
     /// Pastes text using Cmd+V - works with iPhone Mirroring
     /// NOTE: iPhone Mirroring requires explicit Command key press/release sequence
     static func pasteText(_ text: String, focusWindow: (() -> Void)? = nil) -> Bool {
+        // Get iPhone Mirroring process ID
+        guard let windowInfo = WindowDetector.getiPhoneMirroringWindow() else {
+            print("❌ iPhone Mirroring window not found")
+            return false
+        }
+        
         // Copy text to clipboard
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
+        let success = pasteboard.setString(text, forType: .string)
+        
+        // Verify the clipboard content
+        if let clipboardContent = pasteboard.string(forType: .string) {
+            print("📋 Clipboard contains: '\(clipboardContent)'")
+            if clipboardContent != text {
+                print("⚠️ Clipboard mismatch! Expected: '\(text)'")
+            }
+        } else {
+            print("❌ Failed to set clipboard content")
+            return false
+        }
+        
+        // Small delay to ensure clipboard is ready
+        Thread.sleep(forTimeInterval: 0.05)
         
         // Focus window if closure provided
         focusWindow?()
@@ -90,28 +118,30 @@ class KeyboardController {
         
         // 1. Press Command key
         if let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: 55, keyDown: true) { // Command key
-            cmdDown.post(tap: .cghidEventTap)
+            cmdDown.flags = .maskCommand
+            cmdDown.postToPid(windowInfo.processID)
         }
         
         Thread.sleep(forTimeInterval: 0.02)
         
-        // 2. Press V key (without flag since Cmd is already pressed)
+        // 2. Press V key (with Command flag set)
         if let vDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true) { // V key
-            vDown.post(tap: .cghidEventTap)
+            vDown.flags = .maskCommand
+            vDown.postToPid(windowInfo.processID)
         }
         
         Thread.sleep(forTimeInterval: 0.02)
         
         // 3. Release V key
         if let vUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false) {
-            vUp.post(tap: .cghidEventTap)
+            vUp.postToPid(windowInfo.processID)
         }
         
         Thread.sleep(forTimeInterval: 0.02)
         
         // 4. Release Command key
         if let cmdUp = CGEvent(keyboardEventSource: source, virtualKey: 55, keyDown: false) {
-            cmdUp.post(tap: .cghidEventTap)
+            cmdUp.postToPid(windowInfo.processID)
         }
         
         return true
