@@ -10,11 +10,25 @@ import CoreGraphics
 
 // MARK: - iPhone Test Scenario Implementation
 
-struct iPhoneTestScenarioImpl: AutomationScenario {
+typealias iPhoneTestScenario = iPhoneTestScenarioImpl
+
+struct iPhoneTestScenarioImpl: AutomationScenario, Identifiable {
+    let id = UUID()
     let name: String
     let description: String
     let actions: [AutomationAction]
     let delayBetweenActions: TimeInterval
+    
+    static var defaultScenarios: [iPhoneTestScenario] {
+        [
+            PredefinedScenarios.openApp,
+            PredefinedScenarios.scrollFeed,
+            PredefinedScenarios.typeAndSearch,
+            PredefinedScenarios.navigateBack,
+            PredefinedScenarios.switchApps,
+            PredefinedScenarios.fillForm
+        ]
+    }
     
     func execute(with controller: iPhoneAutomationController) async throws {
         guard controller.isConnected else {

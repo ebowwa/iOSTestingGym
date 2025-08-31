@@ -1,5 +1,5 @@
 //
-//  iPhoneAutomationRefactored.swift
+//  iPhoneAutomation.swift
 //  iosAppTester
 //
 //  Main iPhone automation controller using modular components
@@ -33,7 +33,7 @@ import Foundation
 import AppKit
 import CoreGraphics
 
-class iPhoneAutomationRefactored: ObservableObject {
+class iPhoneAutomation: ObservableObject {
     
     // MARK: - Published Properties
     
@@ -42,6 +42,30 @@ class iPhoneAutomationRefactored: ObservableObject {
     @Published var automationLog: [String] = []
     @Published var hasAccessibilityPermission = false
     @Published var permissionCheckComplete = false
+    @Published var connectionQuality: ConnectionQuality = .unknown
+    @Published var lastResponseTime: TimeInterval = 0
+    
+    enum ConnectionQuality: String {
+        case excellent = "Excellent"  // < 100ms
+        case good = "Good"            // 100-300ms
+        case fair = "Fair"            // 300-500ms
+        case poor = "Poor"            // 500-1000ms
+        case bad = "Bad"              // > 1000ms
+        case disconnected = "Disconnected"
+        case unknown = "Unknown"
+        
+        var color: String {
+            switch self {
+            case .excellent: return "🟢"
+            case .good: return "🟢"
+            case .fair: return "🟡"
+            case .poor: return "🟠"
+            case .bad: return "🔴"
+            case .disconnected: return "⚫"
+            case .unknown: return "⚪"
+            }
+        }
+    }
     
     // MARK: - Private Properties
     
@@ -58,13 +82,17 @@ class iPhoneAutomationRefactored: ObservableObject {
     func checkAccessibilityPermission() {
         // Check if we have accessibility permissions
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
+        let previousStatus = hasAccessibilityPermission
         hasAccessibilityPermission = AXIsProcessTrustedWithOptions(options as CFDictionary)
         permissionCheckComplete = true
         
-        if !hasAccessibilityPermission {
-            log("⚠️ Accessibility permission required for automation", level: .warning)
-        } else {
-            log("✅ Accessibility permission granted", level: .success)
+        // Only log if status changed or this is the first check
+        if previousStatus != hasAccessibilityPermission {
+            if !hasAccessibilityPermission {
+                log("⚠️ Accessibility permission required for automation", level: .warning)
+            } else {
+                log("✅ Accessibility permission granted", level: .success)
+            }
         }
     }
     
@@ -142,8 +170,8 @@ class iPhoneAutomationRefactored: ObservableObject {
             return
         }
         
-        let success = KeyboardController.typeText(text) { [weak self] in
-            self?.focusWindow()
+        let success = KeyboardController.typeText(text) { 
+            // No focus action - just type
         }
         
         if success {
@@ -159,8 +187,8 @@ class iPhoneAutomationRefactored: ObservableObject {
             return
         }
         
-        let success = KeyboardController.pasteText(text) { [weak self] in
-            self?.focusWindow()
+        let success = KeyboardController.pasteText(text) {
+            // No focus action - just paste
         }
         
         if success {
@@ -172,14 +200,111 @@ class iPhoneAutomationRefactored: ObservableObject {
     
     // MARK: - Mouse/Gesture Control
     
-    func tapAt(x: CGFloat, y: CGFloat, in windowBounds: CGRect) {
+    func tapAt(x: CGFloat, y: CGFloat, in windowBounds: CGRect, retryCount: Int = 0) {
         guard hasAccessibilityPermission else {
             log("❌ Cannot tap - accessibility permission required", level: .error)
             return
         }
         
+        // Check connection quality before action
+        if connectionQuality == .disconnected || connectionQuality == .bad {
+            log("⚠️ Poor connection detected, attempting action...", level: .warning)
+        }
+        
+        // Try the tap
         MouseController.tapAt(x: x, y: y, in: windowBounds)
+        
+        // Verify window still exists (connection still active)
+        if WindowDetector.getiPhoneMirroringWindow() == nil {
+            if retryCount < 3 {
+                log("🔄 Connection lost, retrying tap... (attempt \(retryCount + 1)/3)", level: .warning)
+                Thread.sleep(forTimeInterval: 1.0) // Wait a second before retry
+                
+                // Try to detect window again
+                if detectiPhoneMirroring() {
+                    if let newBounds = getiPhoneMirroringWindow() {
+                        tapAt(x: x, y: y, in: newBounds, retryCount: retryCount + 1)
+                        return
+                    }
+                }
+            } else {
+                log("❌ Failed to tap after 3 retries - connection lost", level: .error)
+                connectionQuality = .disconnected
+                return
+            }
+        }
+        
         log("👆 Tapped at (\(Int(x)), \(Int(y)))", level: .info)
+    }
+    
+    /// Ensures the iPhone Mirroring window is focused before performing actions
+    func ensureWindowFocused() {
+        guard let windowInfo = WindowDetector.getiPhoneMirroringWindow() else { 
+            log("❌ Cannot focus - window not found", level: .error)
+            connectionQuality = .disconnected
+            return 
+        }
+        
+        // Activate the iPhone Mirroring app first
+        WindowDetector.activateiPhoneMirroring()
+        Thread.sleep(forTimeInterval: 0.2)
+        
+        // Click once in a safe area to ensure the window has focus
+        let safeX = windowInfo.bounds.origin.x + windowInfo.bounds.width / 2
+        let safeY = windowInfo.bounds.origin.y + 50 // Near top but not in title bar
+        
+        MouseController.click(at: CGPoint(x: safeX, y: safeY), clickCount: 1)
+        Thread.sleep(forTimeInterval: 0.1)
+        
+        log("🎯 Window focused", level: .info)
+    }
+    
+    /// Tests connection quality by performing a simple action and measuring response
+    func testConnectionQuality() {
+        guard let windowInfo = WindowDetector.getiPhoneMirroringWindow() else {
+            connectionQuality = .disconnected
+            log("⚫ Connection lost - iPhone Mirroring window not found", level: .error)
+            return
+        }
+        
+        let startTime = Date()
+        
+        // Try a simple mouse move to test responsiveness
+        let testX = windowInfo.bounds.origin.x + windowInfo.bounds.width / 2
+        let testY = windowInfo.bounds.origin.y + windowInfo.bounds.height / 2
+        
+        if let moveEvent = CGEvent(
+            mouseEventSource: nil,
+            mouseType: .mouseMoved,
+            mouseCursorPosition: CGPoint(x: testX, y: testY),
+            mouseButton: .left
+        ) {
+            moveEvent.post(tap: .cghidEventTap)
+        }
+        
+        // Check if window still exists after action
+        if WindowDetector.getiPhoneMirroringWindow() != nil {
+            let responseTime = Date().timeIntervalSince(startTime) * 1000 // Convert to ms
+            lastResponseTime = responseTime
+            
+            // Update connection quality based on response time
+            if responseTime < 100 {
+                connectionQuality = .excellent
+            } else if responseTime < 300 {
+                connectionQuality = .good
+            } else if responseTime < 500 {
+                connectionQuality = .fair
+            } else if responseTime < 1000 {
+                connectionQuality = .poor
+            } else {
+                connectionQuality = .bad
+            }
+            
+            log("\(connectionQuality.color) Connection: \(connectionQuality.rawValue) (\(Int(responseTime))ms)", level: .info)
+        } else {
+            connectionQuality = .disconnected
+            log("⚫ Connection lost during test", level: .error)
+        }
     }
     
     func swipe(from: CGPoint, to: CGPoint, in windowBounds: CGRect, duration: TimeInterval = 0.5) {
@@ -260,7 +385,7 @@ class iPhoneAutomationRefactored: ObservableObject {
     
     // MARK: - Logging
     
-    private func log(_ message: String, level: LogLevel) {
+    func log(_ message: String, level: LogLevel) {
         let emoji: String
         switch level {
         case .info: emoji = "📱"
@@ -280,7 +405,7 @@ class iPhoneAutomationRefactored: ObservableObject {
 
 // MARK: - Conformance to Protocol
 
-extension iPhoneAutomationRefactored: iPhoneAutomationController {
+extension iPhoneAutomation: iPhoneAutomationController {
     func tap(at point: CGPoint) -> Bool {
         guard let windowBounds = getiPhoneMirroringWindow() else { return false }
         tapAt(x: point.x, y: point.y, in: windowBounds)

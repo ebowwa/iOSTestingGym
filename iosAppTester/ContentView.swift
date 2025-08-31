@@ -11,6 +11,7 @@ struct ContentView: View {
     @StateObject private var screenshotManager = ScreenshotManager()
     @StateObject private var localizationManager = LocalizationManager.shared
     @StateObject private var scenarioManager = TestScenarioManager()
+    @StateObject private var automation = iPhoneAutomation()
     @State private var selectedTab = 0
     
     var body: some View {
@@ -23,7 +24,7 @@ struct ContentView: View {
                 .tag(0)
             
             // iPhone Automation Tab
-            iPhoneAutomationView(screenshotManager: screenshotManager)
+            iPhoneAutomationView(screenshotManager: screenshotManager, automation: automation)
                 .tabItem {
                     Label("iPhone", systemImage: "iphone")
                 }
@@ -34,28 +35,28 @@ struct ContentView: View {
                 .tabItem {
                     Label("Capture Settings", systemImage: "camera.filters")
                 }
-                .tag(1)
+                .tag(2)
             
             // Screenshots Tab
             ScreenshotsView(screenshotManager: screenshotManager)
                 .tabItem {
                     Label("Screenshots", systemImage: "photo.stack")
                 }
-                .tag(2)
+                .tag(3)
             
             // Settings Tab
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gear")
                 }
-                .tag(3)
+                .tag(4)
             
             // Debug Tab
             DebugView(screenshotManager: screenshotManager)
                 .tabItem {
                     Label("Debug", systemImage: "ladybug")
                 }
-                .tag(4)
+                .tag(5)
         }
         .frame(minWidth: 800, minHeight: 500)
     }

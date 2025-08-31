@@ -58,6 +58,12 @@ class WindowDetector {
     
     /// Finds the iPhone Mirroring window and returns its bounds
     static func getiPhoneMirroringWindow() -> WindowInfo? {
+        // First get the process ID
+        let (isRunning, processInfo) = detectiPhoneMirroring()
+        guard isRunning, let processInfo = processInfo else {
+            return nil
+        }
+        
         guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
             return nil
         }
@@ -79,7 +85,8 @@ class WindowDetector {
                         return WindowInfo(
                             windowID: windowID,
                             bounds: CGRect(x: x, y: y, width: width, height: height),
-                            ownerName: ownerName
+                            ownerName: ownerName,
+                            processID: processInfo.processID
                         )
                     }
                 }
@@ -93,6 +100,12 @@ class WindowDetector {
     
     /// Gets all iPhone Mirroring windows (in case multiple are open)
     static func getAlliPhoneMirroringWindows() -> [WindowInfo] {
+        // First get the process ID
+        let (isRunning, processInfo) = detectiPhoneMirroring()
+        guard isRunning, let processInfo = processInfo else {
+            return []
+        }
+        
         guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
             return []
         }
@@ -115,7 +128,8 @@ class WindowDetector {
                         windows.append(WindowInfo(
                             windowID: windowID,
                             bounds: CGRect(x: x, y: y, width: width, height: height),
-                            ownerName: ownerName
+                            ownerName: ownerName,
+                            processID: processInfo.processID
                         ))
                     }
                 }
@@ -171,6 +185,7 @@ class WindowDetector {
         let windowID: CGWindowID
         let bounds: CGRect
         let ownerName: String
+        let processID: pid_t
         
         var center: CGPoint {
             CGPoint(
