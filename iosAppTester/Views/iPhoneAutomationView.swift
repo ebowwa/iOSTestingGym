@@ -122,29 +122,11 @@ struct iPhoneAutomationView: View {
                 }
                 .padding(.vertical, 4)
                 
-                DisclosureGroup("Quick Actions", isExpanded: $quickActionsExpanded) {
-                    Button(action: {
-                        automation.ensureWindowFocused()
-                    }) {
-                        Label("Focus Window", systemImage: "macwindow.on.rectangle")
-                    }
-                    .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || !focusManager.canAcceptInput)
-                    
-                    Button(action: executeHome) {
-                        Label("Home", systemImage: "house")
-                    }
-                    .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || !focusManager.canAcceptInput)
-                    
-                    Button(action: executeAppSwitcher) {
-                        Label("App Switcher", systemImage: "square.stack.3d.up")
-                    }
-                    .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || !focusManager.canAcceptInput)
-                    
-                    Button(action: captureScreenshot) {
-                        Label("Capture Screenshot", systemImage: "camera")
-                    }
-                    .disabled(!automation.isConnected)
-                }
+                QuickActionsView(
+                    automation: automation,
+                    screenshotManager: screenshotManager,
+                    isExpanded: $quickActionsExpanded
+                )
                 .padding(.vertical, 4)
                 
                 DisclosureGroup("Touchpad Control", isExpanded: $touchpadExpanded) {
@@ -296,14 +278,6 @@ struct iPhoneAutomationView: View {
         }
     }
     
-    private func executeHome() {
-        _ = automation.pressHome()
-    }
-    
-    private func executeAppSwitcher() {
-        _ = automation.openAppSwitcher()
-    }
-    
     private func connectionQualityColor(for quality: iPhoneAutomation.ConnectionQuality) -> Color {
         switch quality {
         case .excellent, .good:
@@ -316,30 +290,6 @@ struct iPhoneAutomationView: View {
             return .red
         case .unknown:
             return .gray
-        }
-    }
-    
-    private func captureScreenshot() {
-        // Find iPhone Mirroring app
-        if let app = screenshotManager.runningApps.first(where: { 
-            $0.name.contains("iPhone") || $0.bundleIdentifier?.contains("ScreenContinuity") == true 
-        }) {
-            let scenario = TestScenario(
-                name: "iPhone Screenshot",
-                description: "Captured from iPhone",
-                deviceType: .iPhone,
-                delayBeforeCapture: 0.5,
-                actions: []
-            )
-            
-            screenshotManager.captureScreenshot(of: app, scenario: scenario) { result in
-                switch result {
-                case .success:
-                    print("✅ iPhone screenshot captured")
-                case .failure(let error):
-                    print("❌ Failed to capture: \(error)")
-                }
-            }
         }
     }
     
@@ -448,7 +398,13 @@ struct iPhoneAutomationView: View {
                 case .wait(let duration):
                     try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
                 case .screenshot:
-                    captureScreenshot()
+                    let context = DefaultQuickActionContext(
+                        automation: automation,
+                        screenshotManager: screenshotManager,
+                        focusManager: focusManager
+                    )
+                    let screenshotAction = ScreenshotAction(context: context)
+                    screenshotAction.execute()
                 }
                 
                 // Delay between actions

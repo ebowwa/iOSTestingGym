@@ -261,7 +261,7 @@ class iPhoneAutomation: ObservableObject {
         }
         
         // Activate the iPhone Mirroring app first
-        WindowDetector.activateiPhoneMirroring()
+        _ = WindowDetector.activateiPhoneMirroring()
         Thread.sleep(forTimeInterval: 0.2)
         
         // Click once in a safe area to ensure the window has focus
@@ -339,13 +339,53 @@ class iPhoneAutomation: ObservableObject {
             return
         }
         
-        // Command+Shift+H
-        KeyboardController.sendKeyboardShortcut(
-            keyCode: KeyboardController.KeyCodes.h,
-            modifiers: [.maskCommand, .maskShift]
+        guard let windowBounds = getiPhoneMirroringWindow() else {
+            log("❌ Cannot press Home - window not found", level: .error)
+            return
+        }
+        
+        // Ensure iPhone Mirroring window is focused first
+        ensureWindowFocused()
+        Thread.sleep(forTimeInterval: 0.1) // Give time for focus
+        
+        // Step 1: Hover over the top area of the window to reveal the toolbar
+        let hoverX = windowBounds.width / 2
+        let hoverY: CGFloat = 30 // Near the top where the toolbar appears
+        
+        log("🎯 Hovering to reveal toolbar", level: .info)
+        // Move cursor to hover position (without clicking)
+        let hoverPoint = CGPoint(
+            x: windowBounds.origin.x + hoverX,
+            y: windowBounds.origin.y + hoverY
+        )
+        if let moveEvent = CGEvent(
+            mouseEventSource: nil,
+            mouseType: .mouseMoved,
+            mouseCursorPosition: hoverPoint,
+            mouseButton: .left
+        ) {
+            moveEvent.post(tap: .cghidEventTap)
+        }
+        
+        // Wait for toolbar to appear
+        Thread.sleep(forTimeInterval: 0.5)
+        
+        // Step 2: Click the Home button in the toolbar  
+        // The Home button is slightly left of mathematical center
+        let homeButtonX = (windowBounds.width / 2) - 15  // 15 pixels left of center
+        let homeButtonY: CGFloat = 30  // In the toolbar area
+        
+        let clickPoint = CGPoint(
+            x: windowBounds.origin.x + homeButtonX,
+            y: windowBounds.origin.y + homeButtonY
         )
         
-        log("🏠 Pressed Home", level: .info)
+        log("🏠 Clicking Home button at exact position: (\(clickPoint.x), \(clickPoint.y))", level: .info)
+        log("📏 Window width: \(windowBounds.width), center X: \(homeButtonX)", level: .info)
+        
+        MouseController.click(at: clickPoint, clickCount: 1)
+        
+        log("✅ Home button pressed", level: .info)
     }
     
     func openAppSwitcherInternal() {
@@ -359,13 +399,52 @@ class iPhoneAutomation: ObservableObject {
             return
         }
         
-        // Command+Shift+A
-        KeyboardController.sendKeyboardShortcut(
-            keyCode: KeyboardController.KeyCodes.a,
-            modifiers: [.maskCommand, .maskShift]
+        guard let windowBounds = getiPhoneMirroringWindow() else {
+            log("❌ Cannot open App Switcher - window not found", level: .error)
+            return
+        }
+        
+        // Ensure iPhone Mirroring window is focused first
+        ensureWindowFocused()
+        Thread.sleep(forTimeInterval: 0.1) // Give time for focus
+        
+        // Step 1: Hover over the top area of the window to reveal the toolbar
+        let hoverX = windowBounds.width / 2
+        let hoverY: CGFloat = 30 // Near the top where the toolbar appears
+        
+        log("🎯 Hovering to reveal toolbar", level: .info)
+        // Move cursor to hover position (without clicking)
+        let hoverPoint = CGPoint(
+            x: windowBounds.origin.x + hoverX,
+            y: windowBounds.origin.y + hoverY
+        )
+        if let moveEvent = CGEvent(
+            mouseEventSource: nil,
+            mouseType: .mouseMoved,
+            mouseCursorPosition: hoverPoint,
+            mouseButton: .left
+        ) {
+            moveEvent.post(tap: .cghidEventTap)
+        }
+        
+        // Wait for toolbar to appear
+        Thread.sleep(forTimeInterval: 0.5)
+        
+        // Step 2: Click the App Switcher button in the toolbar
+        // The App Switcher button is usually to the right of the Home button
+        let appSwitcherButtonX = (windowBounds.width / 2) + 10  // Slightly right of center
+        let appSwitcherButtonY: CGFloat = 30   // In the toolbar area
+        
+        log("📱 Clicking App Switcher button in toolbar", level: .info)
+        MouseController.click(
+            at: CGPoint(
+                x: windowBounds.origin.x + appSwitcherButtonX,
+                y: windowBounds.origin.y + appSwitcherButtonY
+            ),
+            clickCount: 1
         )
         
-        log("📱 Opened App Switcher", level: .info)
+        log("✅ App Switcher opened", level: .info)
     }
     
     // MARK: - Action Execution

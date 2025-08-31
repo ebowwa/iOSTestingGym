@@ -151,13 +151,30 @@ class KeyboardController {
     
     /// Sends a keyboard shortcut (e.g., Cmd+Shift+H for Home)
     static func sendKeyboardShortcut(keyCode: CGKeyCode, modifiers: CGEventFlags) {
+        // Get the iPhone Mirroring window info to target it specifically
+        guard let windowInfo = WindowDetector.getiPhoneMirroringWindow() else {
+            print("❌ Cannot send keyboard shortcut - iPhone Mirroring window not found")
+            // Fallback to general event tap
+            let keyDown = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true)
+            keyDown?.flags = modifiers
+            keyDown?.post(tap: .cghidEventTap)
+            
+            let keyUp = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false)
+            keyUp?.flags = modifiers
+            keyUp?.post(tap: .cghidEventTap)
+            return
+        }
+        
+        // Send directly to iPhone Mirroring process
         let keyDown = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true)
         keyDown?.flags = modifiers
-        keyDown?.post(tap: .cghidEventTap)
+        keyDown?.postToPid(windowInfo.processID)
+        
+        Thread.sleep(forTimeInterval: 0.05) // Small delay between key down and up
         
         let keyUp = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false)
         keyUp?.flags = modifiers
-        keyUp?.post(tap: .cghidEventTap)
+        keyUp?.postToPid(windowInfo.processID)
     }
     
     // MARK: - Character to Key Code Mapping
