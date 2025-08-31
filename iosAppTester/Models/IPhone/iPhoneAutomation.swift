@@ -170,6 +170,11 @@ class iPhoneAutomation: ObservableObject {
             return
         }
         
+        guard AppFocusManager.shared.canAcceptInput else {
+            log("⚠️ Cannot type - app not in focus", level: .warning)
+            return
+        }
+        
         let success = KeyboardController.typeText(text) { 
             // No focus action - just type
         }
@@ -184,6 +189,11 @@ class iPhoneAutomation: ObservableObject {
     func pasteTextInternal(_ text: String) {
         guard hasAccessibilityPermission else {
             log("❌ Cannot paste - accessibility permission required", level: .error)
+            return
+        }
+        
+        guard AppFocusManager.shared.canAcceptInput else {
+            log("⚠️ Cannot paste - app not in focus", level: .warning)
             return
         }
         
@@ -203,6 +213,11 @@ class iPhoneAutomation: ObservableObject {
     func tapAt(x: CGFloat, y: CGFloat, in windowBounds: CGRect, retryCount: Int = 0) {
         guard hasAccessibilityPermission else {
             log("❌ Cannot tap - accessibility permission required", level: .error)
+            return
+        }
+        
+        guard AppFocusManager.shared.canAcceptInput else {
+            log("⚠️ Cannot tap - app not in focus", level: .warning)
             return
         }
         
@@ -259,57 +274,51 @@ class iPhoneAutomation: ObservableObject {
         log("🎯 Window focused", level: .info)
     }
     
-    /// Tests connection quality by performing a simple action and measuring response
+    private var lastLoggedQuality: ConnectionQuality?
+    
+    /// Tests connection quality by checking window existence without moving cursor
     func testConnectionQuality() {
-        guard let windowInfo = WindowDetector.getiPhoneMirroringWindow() else {
+        let startTime = Date()
+        
+        // Simply check if window exists without any cursor movement
+        guard let _ = WindowDetector.getiPhoneMirroringWindow() else {
             connectionQuality = .disconnected
             log("⚫ Connection lost - iPhone Mirroring window not found", level: .error)
             return
         }
         
-        let startTime = Date()
+        // Measure how fast we can detect the window
+        let responseTime = Date().timeIntervalSince(startTime) * 1000 // Convert to ms
+        lastResponseTime = responseTime
         
-        // Try a simple mouse move to test responsiveness
-        let testX = windowInfo.bounds.origin.x + windowInfo.bounds.width / 2
-        let testY = windowInfo.bounds.origin.y + windowInfo.bounds.height / 2
-        
-        if let moveEvent = CGEvent(
-            mouseEventSource: nil,
-            mouseType: .mouseMoved,
-            mouseCursorPosition: CGPoint(x: testX, y: testY),
-            mouseButton: .left
-        ) {
-            moveEvent.post(tap: .cghidEventTap)
+        // Update connection quality based on detection speed
+        if responseTime < 10 {
+            connectionQuality = .excellent
+        } else if responseTime < 30 {
+            connectionQuality = .good
+        } else if responseTime < 50 {
+            connectionQuality = .fair
+        } else if responseTime < 100 {
+            connectionQuality = .poor
+        } else {
+            connectionQuality = .bad
         }
         
-        // Check if window still exists after action
-        if WindowDetector.getiPhoneMirroringWindow() != nil {
-            let responseTime = Date().timeIntervalSince(startTime) * 1000 // Convert to ms
-            lastResponseTime = responseTime
-            
-            // Update connection quality based on response time
-            if responseTime < 100 {
-                connectionQuality = .excellent
-            } else if responseTime < 300 {
-                connectionQuality = .good
-            } else if responseTime < 500 {
-                connectionQuality = .fair
-            } else if responseTime < 1000 {
-                connectionQuality = .poor
-            } else {
-                connectionQuality = .bad
-            }
-            
+        // Only log if quality changed
+        if lastLoggedQuality != connectionQuality {
             log("\(connectionQuality.color) Connection: \(connectionQuality.rawValue) (\(Int(responseTime))ms)", level: .info)
-        } else {
-            connectionQuality = .disconnected
-            log("⚫ Connection lost during test", level: .error)
+            lastLoggedQuality = connectionQuality
         }
     }
     
     func swipe(from: CGPoint, to: CGPoint, in windowBounds: CGRect, duration: TimeInterval = 0.5) {
         guard hasAccessibilityPermission else {
             log("❌ Cannot swipe - accessibility permission required", level: .error)
+            return
+        }
+        
+        guard AppFocusManager.shared.canAcceptInput else {
+            log("⚠️ Cannot swipe - app not in focus", level: .warning)
             return
         }
         
@@ -325,6 +334,11 @@ class iPhoneAutomation: ObservableObject {
             return
         }
         
+        guard AppFocusManager.shared.canAcceptInput else {
+            log("⚠️ Cannot press Home - app not in focus", level: .warning)
+            return
+        }
+        
         // Command+Shift+H
         KeyboardController.sendKeyboardShortcut(
             keyCode: KeyboardController.KeyCodes.h,
@@ -337,6 +351,11 @@ class iPhoneAutomation: ObservableObject {
     func openAppSwitcherInternal() {
         guard hasAccessibilityPermission else {
             log("❌ Cannot open App Switcher - accessibility permission required", level: .error)
+            return
+        }
+        
+        guard AppFocusManager.shared.canAcceptInput else {
+            log("⚠️ Cannot open App Switcher - app not in focus", level: .warning)
             return
         }
         

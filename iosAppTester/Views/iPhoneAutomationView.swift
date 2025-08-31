@@ -10,6 +10,7 @@ import SwiftUI
 struct iPhoneAutomationView: View {
     @ObservedObject var automation: iPhoneAutomation
     @ObservedObject var screenshotManager: ScreenshotManager
+    @StateObject private var focusManager = AppFocusManager.shared
     
     init(screenshotManager: ScreenshotManager, automation: iPhoneAutomation? = nil) {
         self.screenshotManager = screenshotManager
@@ -20,6 +21,7 @@ struct iPhoneAutomationView: View {
     @State private var customX: String = "200"
     @State private var customY: String = "400"
     @State private var customText: String = ""
+    @State private var savedCursorPosition: CGPoint? = nil
     
     // Disclosure Group expansion states
     @State private var statusExpanded = true
@@ -55,6 +57,15 @@ struct iPhoneAutomationView: View {
                 }
                 
                 DisclosureGroup("Status", isExpanded: $statusExpanded) {
+                    // App Focus Status
+                    HStack {
+                        Circle()
+                            .fill(focusManager.canAcceptInput ? Color.green : Color.orange)
+                            .frame(width: 10, height: 10)
+                        Text(focusManager.canAcceptInput ? "App Focused" : "App Not Focused")
+                        Spacer()
+                    }
+                    
                     // Accessibility Permission
                     HStack {
                         Circle()
@@ -117,17 +128,17 @@ struct iPhoneAutomationView: View {
                     }) {
                         Label("Focus Window", systemImage: "macwindow.on.rectangle")
                     }
-                    .disabled(!automation.isConnected || !automation.hasAccessibilityPermission)
+                    .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || !focusManager.canAcceptInput)
                     
                     Button(action: executeHome) {
                         Label("Home", systemImage: "house")
                     }
-                    .disabled(!automation.isConnected || !automation.hasAccessibilityPermission)
+                    .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || !focusManager.canAcceptInput)
                     
                     Button(action: executeAppSwitcher) {
                         Label("App Switcher", systemImage: "square.stack.3d.up")
                     }
-                    .disabled(!automation.isConnected || !automation.hasAccessibilityPermission)
+                    .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || !focusManager.canAcceptInput)
                     
                     Button(action: captureScreenshot) {
                         Label("Capture Screenshot", systemImage: "camera")
@@ -137,7 +148,7 @@ struct iPhoneAutomationView: View {
                 .padding(.vertical, 4)
                 
                 DisclosureGroup("Touchpad Control", isExpanded: $touchpadExpanded) {
-                    TouchpadView(automation: automation)
+                    TouchpadView(automation: automation, isExpanded: $touchpadExpanded)
                         .frame(height: 300)
                         .padding(.vertical, 4)
                 }
@@ -154,7 +165,7 @@ struct iPhoneAutomationView: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                        .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || isRunning)
+                        .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || isRunning || !focusManager.canAcceptInput)
                     }
                 }
             }
@@ -175,7 +186,7 @@ struct iPhoneAutomationView: View {
                             Button("Tap") {
                                 executeCustomTap()
                             }
-                            .disabled(!automation.isConnected || !automation.hasAccessibilityPermission)
+                            .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || !focusManager.canAcceptInput)
                         }
                         
                         HStack {
@@ -184,12 +195,12 @@ struct iPhoneAutomationView: View {
                             Button("Type") {
                                 executeTypeText()
                             }
-                            .disabled(!automation.isConnected || customText.isEmpty || !automation.hasAccessibilityPermission)
+                            .disabled(!automation.isConnected || customText.isEmpty || !automation.hasAccessibilityPermission || !focusManager.canAcceptInput)
                             
                             Button("Paste") {
                                 executePasteText()
                             }
-                            .disabled(!automation.isConnected || customText.isEmpty || !automation.hasAccessibilityPermission)
+                            .disabled(!automation.isConnected || customText.isEmpty || !automation.hasAccessibilityPermission || !focusManager.canAcceptInput)
                         }
                         
                         VStack(spacing: 10) {
@@ -234,7 +245,7 @@ struct iPhoneAutomationView: View {
                                 Spacer()
                             }
                         }
-                        .disabled(!automation.isConnected || !automation.hasAccessibilityPermission)
+                        .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || !focusManager.canAcceptInput)
                     }
                     .padding()
                 }
@@ -276,8 +287,8 @@ struct iPhoneAutomationView: View {
                 automation.checkAccessibilityPermission()
             }
             
-            // Set up timer to check connection quality
-            Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
+            // Set up timer to check connection quality less frequently
+            Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
                 if automation.isConnected {
                     automation.testConnectionQuality()
                 }
@@ -366,6 +377,9 @@ struct iPhoneAutomationView: View {
         let centerX = windowBounds.width / 2
         let centerY = windowBounds.height / 2
         
+        // Save current cursor position if we have touchpad view's position
+        // For now, we'll just perform the swipe from center
+        
         switch direction {
         case .up:
             automation.swipe(
@@ -391,6 +405,20 @@ struct iPhoneAutomationView: View {
                 to: CGPoint(x: centerX + 100, y: centerY),
                 in: windowBounds
             )
+        }
+        
+        // Return cursor to center after swipe
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if let moveEvent = CGEvent(
+                mouseEventSource: nil,
+                mouseType: .mouseMoved,
+                mouseCursorPosition: CGPoint(x: windowBounds.origin.x + centerX, y: windowBounds.origin.y + centerY),
+                mouseButton: .left
+            ) {
+                if let windowInfo = WindowDetector.getiPhoneMirroringWindow() {
+                    moveEvent.postToPid(windowInfo.processID)
+                }
+            }
         }
     }
     
