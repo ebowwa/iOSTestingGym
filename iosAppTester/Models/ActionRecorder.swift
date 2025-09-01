@@ -14,30 +14,32 @@ class ActionRecorder: ObservableObject {
     // MARK: - Types
     
     enum RecordedAction: Codable {
-        case mouseMove(x: CGFloat, y: CGFloat)
-        case mouseClick(x: CGFloat, y: CGFloat, clickCount: Int)
-        case mouseDown(x: CGFloat, y: CGFloat)
-        case mouseUp(x: CGFloat, y: CGFloat)
-        case mouseDrag(fromX: CGFloat, fromY: CGFloat, toX: CGFloat, toY: CGFloat)
+        // Store both absolute and relative positions
+        case mouseMove(x: CGFloat, y: CGFloat, relativeX: CGFloat, relativeY: CGFloat)
+        case mouseClick(x: CGFloat, y: CGFloat, relativeX: CGFloat, relativeY: CGFloat, clickCount: Int)
+        case mouseDown(x: CGFloat, y: CGFloat, relativeX: CGFloat, relativeY: CGFloat)
+        case mouseUp(x: CGFloat, y: CGFloat, relativeX: CGFloat, relativeY: CGFloat)
+        case mouseDrag(fromX: CGFloat, fromY: CGFloat, toX: CGFloat, toY: CGFloat, 
+                       fromRelX: CGFloat, fromRelY: CGFloat, toRelX: CGFloat, toRelY: CGFloat)
         case keyPress(keyCode: UInt16, modifiers: UInt64)
         case wait(seconds: TimeInterval)
         
         var description: String {
             switch self {
-            case .mouseMove(let x, let y):
-                return "Move to (\(Int(x)), \(Int(y)))"
-            case .mouseClick(let x, let y, let count):
-                return "Click\(count > 1 ? " x\(count)" : "") at (\(Int(x)), \(Int(y)))"
-            case .mouseDown(let x, let y):
-                return "Mouse down at (\(Int(x)), \(Int(y)))"
-            case .mouseUp(let x, let y):
-                return "Mouse up at (\(Int(x)), \(Int(y)))"
-            case .mouseDrag(let fx, let fy, let tx, let ty):
-                return "Drag from (\(Int(fx)), \(Int(fy))) to (\(Int(tx)), \(Int(ty)))"
+            case .mouseMove(_, _, let relX, let relY):
+                return "Move to (\(Int(relX*100))%, \(Int(relY*100))%)"
+            case .mouseClick(_, _, let relX, let relY, let count):
+                return "Click\(count > 1 ? " x\(count)" : "") at (\(Int(relX*100))%, \(Int(relY*100))%)"
+            case .mouseDown(_, _, let relX, let relY):
+                return "Mouse down at (\(Int(relX*100))%, \(Int(relY*100))%)"
+            case .mouseUp(_, _, let relX, let relY):
+                return "Mouse up at (\(Int(relX*100))%, \(Int(relY*100))%)"
+            case .mouseDrag(_, _, _, _, let fRelX, let fRelY, let tRelX, let tRelY):
+                return "Drag from (\(Int(fRelX*100))%, \(Int(fRelY*100))%) to (\(Int(tRelX*100))%, \(Int(tRelY*100))%)"
             case .keyPress(let code, _):
                 return "Key press: \(code)"
             case .wait(let seconds):
-                return "Wait \(seconds)s"
+                return "Wait \(String(format: "%.1f", seconds))s"
             }
         }
     }
@@ -157,29 +159,56 @@ class ActionRecorder: ObservableObject {
         case .leftMouseDown:
             isDragging = true
             dragStartPoint = screenLocation
-            currentActions.append(.mouseDown(x: screenLocation.x, y: screenLocation.y))
+            // Calculate relative position within window
+            let relX = (screenLocation.x - windowBounds.origin.x) / windowBounds.width
+            let relY = (screenLocation.y - windowBounds.origin.y) / windowBounds.height
+            currentActions.append(.mouseDown(
+                x: screenLocation.x, 
+                y: screenLocation.y, 
+                relativeX: relX, 
+                relativeY: relY
+            ))
             
         case .leftMouseUp:
             if isDragging, let startPoint = dragStartPoint {
                 // Record as drag if mouse moved significantly
                 let distance = hypot(screenLocation.x - startPoint.x, screenLocation.y - startPoint.y)
                 if distance > 5 {
+                    let fromRelX = (startPoint.x - windowBounds.origin.x) / windowBounds.width
+                    let fromRelY = (startPoint.y - windowBounds.origin.y) / windowBounds.height
+                    let toRelX = (screenLocation.x - windowBounds.origin.x) / windowBounds.width
+                    let toRelY = (screenLocation.y - windowBounds.origin.y) / windowBounds.height
                     currentActions.append(.mouseDrag(
                         fromX: startPoint.x,
                         fromY: startPoint.y,
                         toX: screenLocation.x,
-                        toY: screenLocation.y
+                        toY: screenLocation.y,
+                        fromRelX: fromRelX,
+                        fromRelY: fromRelY,
+                        toRelX: toRelX,
+                        toRelY: toRelY
                     ))
                 } else {
                     // Just a click
+                    let relX = (screenLocation.x - windowBounds.origin.x) / windowBounds.width
+                    let relY = (screenLocation.y - windowBounds.origin.y) / windowBounds.height
                     currentActions.append(.mouseClick(
                         x: screenLocation.x,
                         y: screenLocation.y,
+                        relativeX: relX,
+                        relativeY: relY,
                         clickCount: event.clickCount
                     ))
                 }
             } else {
-                currentActions.append(.mouseUp(x: screenLocation.x, y: screenLocation.y))
+                let relX = (screenLocation.x - windowBounds.origin.x) / windowBounds.width
+                let relY = (screenLocation.y - windowBounds.origin.y) / windowBounds.height
+                currentActions.append(.mouseUp(
+                    x: screenLocation.x, 
+                    y: screenLocation.y,
+                    relativeX: relX,
+                    relativeY: relY
+                ))
             }
             isDragging = false
             dragStartPoint = nil
@@ -193,7 +222,14 @@ class ActionRecorder: ObservableObject {
             if let lastPos = lastMousePosition {
                 let distance = hypot(screenLocation.x - lastPos.x, screenLocation.y - lastPos.y)
                 if distance > 20 { // Only record if moved more than 20 pixels
-                    currentActions.append(.mouseMove(x: screenLocation.x, y: screenLocation.y))
+                    let relX = (screenLocation.x - windowBounds.origin.x) / windowBounds.width
+                    let relY = (screenLocation.y - windowBounds.origin.y) / windowBounds.height
+                    currentActions.append(.mouseMove(
+                        x: screenLocation.x, 
+                        y: screenLocation.y,
+                        relativeX: relX,
+                        relativeY: relY
+                    ))
                     lastMousePosition = screenLocation
                 }
             } else {
@@ -217,22 +253,24 @@ class ActionRecorder: ObservableObject {
     
     func replay(_ recording: Recording, in currentWindowBounds: CGRect) async {
         print("▶️ Replaying: \(recording.name)")
+        print("📐 Original window: \(recording.windowBounds.size), Current: \(currentWindowBounds.size)")
         
-        // Calculate offset if window has moved
-        let xOffset = currentWindowBounds.origin.x - recording.windowBounds.origin.x
-        let yOffset = currentWindowBounds.origin.y - recording.windowBounds.origin.y
-        
+        // Use relative positioning to handle both movement and resize
         for action in recording.actions {
-            await executeAction(action, xOffset: xOffset, yOffset: yOffset)
+            await executeAction(action, in: currentWindowBounds)
         }
         
         print("✅ Replay complete")
     }
     
-    private func executeAction(_ action: RecordedAction, xOffset: CGFloat, yOffset: CGFloat) async {
+    private func executeAction(_ action: RecordedAction, in windowBounds: CGRect) async {
         switch action {
-        case .mouseMove(let x, let y):
-            let adjustedPoint = CGPoint(x: x + xOffset, y: y + yOffset)
+        case .mouseMove(_, _, let relX, let relY):
+            // Use relative position to calculate new absolute position
+            let adjustedPoint = CGPoint(
+                x: windowBounds.origin.x + (relX * windowBounds.width),
+                y: windowBounds.origin.y + (relY * windowBounds.height)
+            )
             if let event = CGEvent(
                 mouseEventSource: nil,
                 mouseType: .mouseMoved,
@@ -242,12 +280,18 @@ class ActionRecorder: ObservableObject {
                 event.post(tap: .cghidEventTap)
             }
             
-        case .mouseClick(let x, let y, let count):
-            let adjustedPoint = CGPoint(x: x + xOffset, y: y + yOffset)
+        case .mouseClick(_, _, let relX, let relY, let count):
+            let adjustedPoint = CGPoint(
+                x: windowBounds.origin.x + (relX * windowBounds.width),
+                y: windowBounds.origin.y + (relY * windowBounds.height)
+            )
             MouseController.click(at: adjustedPoint, clickCount: count)
             
-        case .mouseDown(let x, let y):
-            let adjustedPoint = CGPoint(x: x + xOffset, y: y + yOffset)
+        case .mouseDown(_, _, let relX, let relY):
+            let adjustedPoint = CGPoint(
+                x: windowBounds.origin.x + (relX * windowBounds.width),
+                y: windowBounds.origin.y + (relY * windowBounds.height)
+            )
             if let event = CGEvent(
                 mouseEventSource: nil,
                 mouseType: .leftMouseDown,
@@ -257,8 +301,11 @@ class ActionRecorder: ObservableObject {
                 event.post(tap: .cghidEventTap)
             }
             
-        case .mouseUp(let x, let y):
-            let adjustedPoint = CGPoint(x: x + xOffset, y: y + yOffset)
+        case .mouseUp(_, _, let relX, let relY):
+            let adjustedPoint = CGPoint(
+                x: windowBounds.origin.x + (relX * windowBounds.width),
+                y: windowBounds.origin.y + (relY * windowBounds.height)
+            )
             if let event = CGEvent(
                 mouseEventSource: nil,
                 mouseType: .leftMouseUp,
@@ -268,10 +315,16 @@ class ActionRecorder: ObservableObject {
                 event.post(tap: .cghidEventTap)
             }
             
-        case .mouseDrag(let fx, let fy, let tx, let ty):
+        case .mouseDrag(_, _, _, _, let fromRelX, let fromRelY, let toRelX, let toRelY):
             MouseController.swipe(
-                from: CGPoint(x: fx + xOffset, y: fy + yOffset),
-                to: CGPoint(x: tx + xOffset, y: ty + yOffset),
+                from: CGPoint(
+                    x: windowBounds.origin.x + (fromRelX * windowBounds.width),
+                    y: windowBounds.origin.y + (fromRelY * windowBounds.height)
+                ),
+                to: CGPoint(
+                    x: windowBounds.origin.x + (toRelX * windowBounds.width),
+                    y: windowBounds.origin.y + (toRelY * windowBounds.height)
+                ),
                 duration: 0.5
             )
             

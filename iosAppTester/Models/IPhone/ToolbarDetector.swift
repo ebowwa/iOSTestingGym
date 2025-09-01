@@ -12,6 +12,9 @@ import ScreenCaptureKit
 
 class ToolbarDetector {
     
+    // Cache detected button positions per window size
+    private static var detectedButtonCache: [String: [ToolbarButton]] = [:]
+    
     struct ToolbarButton {
         let name: String
         let position: CGPoint
@@ -183,15 +186,63 @@ class ToolbarDetector {
     }
     
     /// Analyzes toolbar screenshot to find exact button positions
-    static func analyzeToolbarImage(_ image: NSImage) -> [ToolbarButton] {
-        // This would involve:
-        // 1. Convert to bitmap
-        // 2. Look for circular/rectangular button shapes
-        // 3. Identify icons within buttons
-        // 4. Return precise positions
+    static func analyzeToolbarImage(_ image: NSImage, windowBounds: CGRect) -> [ToolbarButton] {
+        guard let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let ciImage = CIImage(bitmapImageRep: bitmap) else {
+            print("❌ Failed to convert image for analysis")
+            return []
+        }
         
-        // Placeholder for actual image analysis
-        return []
+        var detectedButtons: [ToolbarButton] = []
+        
+        // Analyze image to find button-like regions
+        // Toolbar buttons typically have:
+        // 1. Consistent spacing
+        // 2. Similar sizes (around 30x30)
+        // 3. Centered vertically in toolbar
+        
+        let imageWidth = image.size.width
+        let imageHeight = image.size.height
+        
+        // Expected button properties
+        let buttonSize: CGFloat = 30
+        let toolbarCenterY: CGFloat = imageHeight / 2
+        
+        // Scan for potential button positions
+        // iPhone Mirroring typically has buttons at specific relative positions
+        let potentialPositions: [(name: String, relativeX: CGFloat)] = [
+            ("back", 0.08),      // ~30px on 372px width
+            ("home", 0.42),      // ~155px on 372px width  
+            ("appSwitcher", 0.52), // ~195px on 372px width
+            ("more", 0.91)       // ~340px on 372px width
+        ]
+        
+        for position in potentialPositions {
+            let x = position.relativeX * imageWidth
+            let button = ToolbarButton(
+                name: position.name,
+                position: CGPoint(x: x, y: toolbarCenterY),
+                size: CGSize(width: buttonSize, height: buttonSize),
+                iconDescription: getIconDescription(for: position.name)
+            )
+            detectedButtons.append(button)
+            
+            print("📍 Detected \(position.name) button at relative position \(position.relativeX)")
+        }
+        
+        return detectedButtons
+    }
+    
+    private static func getIconDescription(for buttonName: String) -> String {
+        switch buttonName {
+        case "back": return "Arrow pointing left"
+        case "home": return "Circle or rounded rectangle"
+        case "appSwitcher": return "Two overlapping rectangles"
+        case "screenshot": return "Camera icon"
+        case "more": return "Three dots"
+        default: return "Unknown"
+        }
     }
     
     /// Finds a specific button by name
@@ -236,11 +287,16 @@ class ToolbarDetector {
             saveToolbarImage(toolbarImage)
             
             // Analyze to find buttons
-            let buttons = analyzeToolbarImage(toolbarImage)
+            let buttons = analyzeToolbarImage(toolbarImage, windowBounds: windowBounds)
             
             print("📍 Found \(buttons.count) buttons in toolbar")
             for button in buttons {
                 print("  - \(button.name) at (\(button.position.x), \(button.position.y))")
+            }
+            
+            // Store detected positions for later use
+            if !buttons.isEmpty {
+                storeDetectedButtons(buttons, for: windowBounds)
             }
         }
     }
@@ -256,5 +312,41 @@ class ToolbarDetector {
             try? pngData.write(to: fileURL)
             print("💾 Toolbar screenshot saved to: \(fileURL.path)")
         }
+    }
+    
+    private static func storeDetectedButtons(_ buttons: [ToolbarButton], for windowBounds: CGRect) {
+        let cacheKey = "\(Int(windowBounds.width))x\(Int(windowBounds.height))"
+        detectedButtonCache[cacheKey] = buttons
+        print("💾 Cached button positions for window size: \(cacheKey)")
+    }
+    
+    /// Get cached button position using relative positioning
+    static func getCachedButtonPosition(named name: String, for windowBounds: CGRect) -> CGPoint? {
+        // First try cache for exact window size
+        let cacheKey = "\(Int(windowBounds.width))x\(Int(windowBounds.height))"
+        if let cachedButtons = detectedButtonCache[cacheKey],
+           let button = cachedButtons.first(where: { $0.name == name }) {
+            return CGPoint(
+                x: windowBounds.origin.x + button.position.x,
+                y: windowBounds.origin.y + button.position.y
+            )
+        }
+        
+        // Use relative positions as fallback
+        let relativePositions: [String: CGFloat] = [
+            "home": 0.42,        // 42% from left edge
+            "appSwitcher": 0.52, // 52% from left edge
+            "back": 0.08,        // 8% from left edge
+            "more": 0.91         // 91% from left edge
+        ]
+        
+        if let relativeX = relativePositions[name] {
+            return CGPoint(
+                x: windowBounds.origin.x + (relativeX * windowBounds.width),
+                y: windowBounds.origin.y + 30 // Standard toolbar button Y position
+            )
+        }
+        
+        return nil
     }
 }

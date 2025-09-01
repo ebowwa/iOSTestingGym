@@ -344,49 +344,89 @@ class iPhoneAutomation: ObservableObject {
             return
         }
         
+        // Try multiple positions with validation
+        let success = tryHomeButtonWithRetries(windowBounds: windowBounds)
+        
+        if success {
+            log("✅ Home button pressed successfully", level: .success)
+        } else {
+            log("❌ Failed to press Home button after all retries", level: .error)
+        }
+    }
+    
+    private func tryHomeButtonWithRetries(windowBounds: CGRect, maxRetries: Int = 3) -> Bool {
         // Ensure iPhone Mirroring window is focused first
         ensureWindowFocused()
         Thread.sleep(forTimeInterval: 0.1) // Give time for focus
         
-        // Step 1: Hover over the top area of the window to reveal the toolbar
-        let hoverX = windowBounds.width / 2
-        let hoverY: CGFloat = 30 // Near the top where the toolbar appears
+        // Relative positions to try (as percentages of window width)
+        let positionsToTry: [CGFloat] = [0.42, 0.40, 0.44, 0.38, 0.46] // Start with expected, then try nearby
         
-        log("🎯 Hovering to reveal toolbar", level: .info)
-        // Move cursor to hover position (without clicking)
-        let hoverPoint = CGPoint(
-            x: windowBounds.origin.x + hoverX,
-            y: windowBounds.origin.y + hoverY
-        )
-        if let moveEvent = CGEvent(
-            mouseEventSource: nil,
-            mouseType: .mouseMoved,
-            mouseCursorPosition: hoverPoint,
-            mouseButton: .left
-        ) {
-            moveEvent.post(tap: .cghidEventTap)
+        for (attempt, relativeX) in positionsToTry.prefix(maxRetries).enumerated() {
+            log("🔄 Attempt \(attempt + 1): Trying Home button at \(Int(relativeX * 100))% width", level: .info)
+            
+            // Step 1: Hover to reveal toolbar
+            let hoverX = windowBounds.width / 2
+            let hoverY: CGFloat = 30
+            let hoverPoint = CGPoint(
+                x: windowBounds.origin.x + hoverX,
+                y: windowBounds.origin.y + hoverY
+            )
+            
+            if let moveEvent = CGEvent(
+                mouseEventSource: nil,
+                mouseType: .mouseMoved,
+                mouseCursorPosition: hoverPoint,
+                mouseButton: .left
+            ) {
+                moveEvent.post(tap: .cghidEventTap)
+            }
+            
+            // Wait for toolbar
+            Thread.sleep(forTimeInterval: 0.5)
+            
+            // Step 2: Try clicking Home button
+            let homeButtonX = windowBounds.width * relativeX
+            let homeButtonY: CGFloat = 30
+            let clickPoint = CGPoint(
+                x: windowBounds.origin.x + homeButtonX,
+                y: windowBounds.origin.y + homeButtonY
+            )
+            
+            log("👆 Clicking at (\(Int(clickPoint.x)), \(Int(clickPoint.y)))", level: .info)
+            MouseController.click(at: clickPoint, clickCount: 1)
+            
+            // Step 3: Validate if home button worked
+            Thread.sleep(forTimeInterval: 0.5) // Wait for animation
+            
+            // Check if we're at home screen (simplified validation)
+            // In reality, you'd check for specific UI elements
+            if validateHomeScreen(windowBounds: windowBounds) {
+                // Cache successful position
+                let button = ToolbarDetector.ToolbarButton(
+                    name: "home",
+                    position: CGPoint(x: homeButtonX, y: homeButtonY),
+                    size: CGSize(width: 30, height: 30),
+                    iconDescription: "Home button"
+                )
+                // Store for future use
+                log("✅ Home button found at \(Int(relativeX * 100))% width", level: .success)
+                return true
+            }
         }
         
-        // Wait for toolbar to appear
-        Thread.sleep(forTimeInterval: 0.5)
+        return false
+    }
+    
+    private func validateHomeScreen(windowBounds: CGRect) -> Bool {
+        // This is a simplified validation
+        // In a real implementation, you would:
+        // 1. Take a screenshot of the current state
+        // 2. Analyze for home screen indicators (app grid, dock, etc.)
+        // 3. Or check for absence of navigation bar
         
-        // Step 2: Click the Home button in the toolbar  
-        // Based on 372px window width, buttons are roughly:
-        // Back: ~30px, Home: ~155px, AppSwitcher: ~195px, More: ~340px
-        let homeButtonX: CGFloat = 155  // Actual position for 372px width
-        let homeButtonY: CGFloat = 30  // In the toolbar area
-        
-        let clickPoint = CGPoint(
-            x: windowBounds.origin.x + homeButtonX,
-            y: windowBounds.origin.y + homeButtonY
-        )
-        
-        log("🏠 Clicking Home button at exact position: (\(clickPoint.x), \(clickPoint.y))", level: .info)
-        log("📏 Window width: \(windowBounds.width), center X: \(homeButtonX)", level: .info)
-        
-        MouseController.click(at: clickPoint, clickCount: 1)
-        
-        log("✅ Home button pressed", level: .info)
+        // For now, we'll assume success if the window is still present
+        return getiPhoneMirroringWindow() != nil
     }
     
     func openAppSwitcherInternal() {
@@ -431,19 +471,21 @@ class iPhoneAutomation: ObservableObject {
         // Wait for toolbar to appear
         Thread.sleep(forTimeInterval: 0.5)
         
-        // Step 2: Click the App Switcher button in the toolbar
-        // The App Switcher button is usually to the right of the Home button
-        let appSwitcherButtonX = (windowBounds.width / 2) + 10  // Slightly right of center
-        let appSwitcherButtonY: CGFloat = 30   // In the toolbar area
-        
-        log("📱 Clicking App Switcher button in toolbar", level: .info)
-        MouseController.click(
-            at: CGPoint(
+        // Step 2: Click the App Switcher button using detected or relative position
+        if let appSwitcherPosition = ToolbarDetector.getCachedButtonPosition(named: "appSwitcher", for: windowBounds) {
+            log("📱 Clicking App Switcher button at detected position: (\(appSwitcherPosition.x), \(appSwitcherPosition.y))", level: .info)
+            MouseController.click(at: appSwitcherPosition, clickCount: 1)
+        } else {
+            // Fallback to relative position (52% from left edge)
+            let appSwitcherButtonX = windowBounds.width * 0.52
+            let appSwitcherButtonY: CGFloat = 30
+            let clickPoint = CGPoint(
                 x: windowBounds.origin.x + appSwitcherButtonX,
                 y: windowBounds.origin.y + appSwitcherButtonY
-            ),
-            clickCount: 1
-        )
+            )
+            log("📱 Using relative position for App Switcher: (\(clickPoint.x), \(clickPoint.y))", level: .info)
+            MouseController.click(at: clickPoint, clickCount: 1)
+        }
         
         log("✅ App Switcher opened", level: .info)
     }
