@@ -2,6 +2,10 @@
 
 An OpenAI Gym-like environment for iOS app testing and automation through iPhone Mirroring on macOS.
 
+## Demo
+
+https://github.com/user-attachments/assets/Screen%20Recording%202025-08-31%20at%209.53.39%20PM.mov
+
 ## 🎯 Core Vision
 
 A **reinforcement learning-ready environment** for iOS app testing where:
