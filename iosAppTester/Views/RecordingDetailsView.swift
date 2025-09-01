@@ -16,6 +16,8 @@ struct RecordingDetailsView: View {
     @State private var removedIndices: Set<Int> = []
     @State private var playingActionIndex: Int? = nil
     @State private var hasChanges = false
+    @State private var editedName: String = ""
+    @State private var isEditingName = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -37,7 +39,43 @@ struct RecordingDetailsView: View {
                     // Recording Info
                     GroupBox("Recording Information") {
                         VStack(alignment: .leading, spacing: 10) {
-                            InfoRow(label: "Name", value: recording.name)
+                            // Editable name field
+                            HStack {
+                                Text("Name:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                if isEditingName {
+                                    TextField("Recording name", text: $editedName)
+                                        .textFieldStyle(.roundedBorder)
+                                        .font(.caption)
+                                        .frame(maxWidth: 200)
+                                        .onSubmit {
+                                            if editedName != recording.name && !editedName.isEmpty {
+                                                hasChanges = true
+                                            }
+                                            isEditingName = false
+                                        }
+                                    Button("Done") {
+                                        if editedName != recording.name && !editedName.isEmpty {
+                                            hasChanges = true
+                                        }
+                                        isEditingName = false
+                                    }
+                                    .font(.caption)
+                                } else {
+                                    Text(editedName.isEmpty ? recording.name : editedName)
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                    Button(action: {
+                                        isEditingName = true
+                                    }) {
+                                        Image(systemName: "pencil")
+                                            .font(.caption)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
                             InfoRow(label: "Recorded At", value: recording.recordedAt.formatted())
                             InfoRow(label: "Total Actions", value: "\(recording.actions.count)")
                             InfoRow(label: "Duration", value: String(format: "%.1f seconds", recording.duration))
@@ -175,6 +213,7 @@ struct RecordingDetailsView: View {
                     Button("Reset Changes") {
                         removedIndices.removeAll()
                         actionNotes = recording.annotations
+                        editedName = recording.name
                         hasChanges = false
                     }
                     .buttonStyle(.plain)
@@ -201,6 +240,7 @@ struct RecordingDetailsView: View {
         .onAppear {
             editedActions = recording.actions
             actionNotes = recording.annotations
+            editedName = recording.name
         }
     }
     
@@ -256,8 +296,9 @@ struct RecordingDetailsView: View {
         }
         
         // Create new recording with filtered actions
+        let newRecordingName = editedName.isEmpty ? recording.name : editedName
         let newRecording = ActionRecorder.Recording(
-            name: "\(recording.name) (Edited)",
+            name: "\(newRecordingName) (Copy)",
             windowBounds: recording.windowBounds,
             actions: newActions,
             recordedAt: Date(),
@@ -287,6 +328,7 @@ struct RecordingDetailsView: View {
         }
         
         // Update the recording
+        recording.name = editedName.isEmpty ? recording.name : editedName
         recording.actions = newActions
         recording.annotations = newAnnotations
         

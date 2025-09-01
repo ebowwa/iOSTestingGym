@@ -140,6 +140,7 @@ struct ActionRecorderView: View {
                             ForEach(recorder.recordings, id: \.id) { recording in
                                 RecordingRow(
                                     recording: recording,
+                                    recorder: recorder,
                                     onReplay: { replayRecording(recording) },
                                     onDelete: { recorder.deleteRecording(recording) },
                                     onShowDetails: { 
@@ -239,16 +240,40 @@ struct ActionRecorderView: View {
 
 struct RecordingRow: View {
     let recording: ActionRecorder.Recording
+    @ObservedObject var recorder: ActionRecorder
     let onReplay: () -> Void
     let onDelete: () -> Void
     let onShowDetails: () -> Void
     var isDisabled: Bool = false
+    @State private var isEditingName = false
+    @State private var editedName: String = ""
     
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text(recording.name)
-                    .font(.system(.body, design: .rounded))
+                if isEditingName {
+                    TextField("Recording name", text: $editedName)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .rounded))
+                        .onSubmit {
+                            saveNameChange()
+                        }
+                } else {
+                    HStack {
+                        Text(recording.name)
+                            .font(.system(.body, design: .rounded))
+                        Button(action: {
+                            editedName = recording.name
+                            isEditingName = true
+                        }) {
+                            Image(systemName: "pencil")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .opacity(isDisabled ? 0 : 1)
+                    }
+                }
                 
                 HStack {
                     Text("\(recording.actions.count) actions")
@@ -284,9 +309,20 @@ struct RecordingRow: View {
         .background(Color.gray.opacity(0.1))
         .cornerRadius(6)
         .onTapGesture {
-            if !isDisabled {
+            if !isDisabled && !isEditingName {
                 onShowDetails()
             }
         }
+    }
+    
+    private func saveNameChange() {
+        if !editedName.isEmpty && editedName != recording.name {
+            // Find and update the recording
+            if let index = recorder.recordings.firstIndex(where: { $0.id == recording.id }) {
+                recorder.recordings[index].name = editedName
+                recorder.saveRecordings()
+            }
+        }
+        isEditingName = false
     }
 }
