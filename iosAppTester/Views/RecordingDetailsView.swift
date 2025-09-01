@@ -18,6 +18,7 @@ struct RecordingDetailsView: View {
     @State private var hasChanges = false
     @State private var editedName: String = ""
     @State private var isEditingName = false
+    @State private var showingAnalytics = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -27,6 +28,10 @@ struct RecordingDetailsView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
                 Spacer()
+                Button(action: { showingAnalytics = true }) {
+                    Label("Analytics", systemImage: "chart.bar.xaxis")
+                }
+                .buttonStyle(.bordered)
                 Button("Done") {
                     dismiss()
                 }
@@ -241,6 +246,9 @@ struct RecordingDetailsView: View {
             editedActions = recording.actions
             actionNotes = recording.annotations
             editedName = recording.name
+        }
+        .sheet(isPresented: $showingAnalytics) {
+            RecordingAnalyticsView(recording: recording, recordings: [])
         }
     }
     

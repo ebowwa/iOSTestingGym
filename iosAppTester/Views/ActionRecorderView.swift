@@ -17,6 +17,7 @@ struct ActionRecorderView: View {
     @State private var currentReplayAction: String = ""
     @State private var selectedRecording: ActionRecorder.Recording? = nil
     @State private var showRecordingDetails = false
+    @State private var showAllAnalytics = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -135,8 +136,21 @@ struct ActionRecorderView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding()
                 } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Analytics button for all recordings
+                        if recorder.recordings.count > 1 {
+                            Button(action: { showAllAnalytics = true }) {
+                                Label("Analyze All Recordings", systemImage: "chart.line.uptrend.xyaxis")
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(isReplaying || recorder.isRecording)
+                            
+                            Divider()
+                        }
+                        
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 8) {
                             ForEach(recorder.recordings, id: \.id) { recording in
                                 RecordingRow(
                                     recording: recording,
@@ -150,9 +164,10 @@ struct ActionRecorderView: View {
                                     isDisabled: isReplaying || recorder.isRecording
                                 )
                             }
+                            }
                         }
+                        .frame(maxHeight: 200)
                     }
-                    .frame(maxHeight: 200)
                 }
             }
             
@@ -186,6 +201,9 @@ struct ActionRecorderView: View {
             if let recording = selectedRecording {
                 RecordingDetailsView(recording: recording, recorder: recorder)
             }
+        }
+        .sheet(isPresented: $showAllAnalytics) {
+            RecordingAnalyticsView(recording: nil, recordings: recorder.recordings)
         }
     }
     
