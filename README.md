@@ -4,7 +4,7 @@ An OpenAI Gym-like environment for iOS app testing and automation through iPhone
 
 ## Demo
 
-https://github.com/ebowwa/iOSTestingGym/assets/169933890/demo.mp4
+https://github.com/ebowwa/iOSTestingGym/demo.mp4
 
 ## 🎯 Core Vision
 
