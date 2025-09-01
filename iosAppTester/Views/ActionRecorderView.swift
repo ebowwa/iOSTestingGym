@@ -12,6 +12,11 @@ struct ActionRecorderView: View {
     @StateObject private var recorder = ActionRecorder()
     @State private var recordingName = ""
     @State private var showNameAlert = false
+    @State private var isReplaying = false
+    @State private var replayProgress: Double = 0
+    @State private var currentReplayAction: String = ""
+    @State private var selectedRecording: ActionRecorder.Recording? = nil
+    @State private var showRecordingDetails = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -28,6 +33,12 @@ struct ActionRecorderView: View {
                                 Label("Stop Recording", systemImage: "stop.circle.fill")
                                     .foregroundColor(.red)
                             }
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.red, lineWidth: 2)
+                                    .opacity(0.8)
+                                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: recorder.isRecording)
+                            )
                             
                             Text("\(recorder.currentActions.count) actions")
                                 .font(.caption)
@@ -41,11 +52,78 @@ struct ActionRecorderView: View {
                     }
                     
                     if recorder.isRecording {
-                        Text("Click and interact with the iPhone Mirroring window...")
-                            .font(.caption)
-                            .foregroundColor(.orange)
+                        VStack(alignment: .leading, spacing: 5) {
+                            HStack {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 8, height: 8)
+                                    .opacity(0.8)
+                                    .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: recorder.isRecording)
+                                
+                                Text("Recording... Click and interact with iPhone Mirroring")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            }
+                            
+                            if !recorder.lastCapturedEvent.isEmpty {
+                                Text("Last: \(recorder.lastCapturedEvent)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                            }
+                            
+                            // Show recent actions
+                            if !recorder.currentActions.isEmpty {
+                                Text("Recent actions:")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                
+                                ForEach(Array(recorder.currentActions.suffix(3).enumerated()), id: \.offset) { _, action in
+                                    Text("• \(action.description)")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
                     }
                 }
+            }
+            
+            // Visual replay indicator
+            if isReplaying {
+                GroupBox {
+                    VStack(spacing: 10) {
+                        HStack {
+                            Image(systemName: "play.circle.fill")
+                                .foregroundColor(.green)
+                                .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isReplaying)
+                            
+                            Text("Replaying...")
+                                .font(.headline)
+                                .foregroundColor(.green)
+                            
+                            Spacer()
+                        }
+                        
+                        if !currentReplayAction.isEmpty {
+                            Text(currentReplayAction)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        
+                        ProgressView(value: replayProgress)
+                            .progressViewStyle(LinearProgressViewStyle(tint: .green))
+                    }
+                    .padding(5)
+                }
+                .background(Color.green.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.green, lineWidth: 2)
+                        .opacity(0.6)
+                )
             }
             
             // Saved Recordings
@@ -63,7 +141,12 @@ struct ActionRecorderView: View {
                                 RecordingRow(
                                     recording: recording,
                                     onReplay: { replayRecording(recording) },
-                                    onDelete: { recorder.deleteRecording(recording) }
+                                    onDelete: { recorder.deleteRecording(recording) },
+                                    onShowDetails: { 
+                                        selectedRecording = recording
+                                        showRecordingDetails = true
+                                    },
+                                    isDisabled: isReplaying || recorder.isRecording
                                 )
                             }
                         }
@@ -98,6 +181,11 @@ struct ActionRecorderView: View {
                 recordingName = ""
             }
         }
+        .sheet(isPresented: $showRecordingDetails) {
+            if let recording = selectedRecording {
+                RecordingDetailsView(recording: recording, recorder: recorder)
+            }
+        }
     }
     
     private func startRecording() {
@@ -114,13 +202,37 @@ struct ActionRecorderView: View {
     }
     
     private func replayRecording(_ recording: ActionRecorder.Recording) {
-        guard let windowBounds = automation.getiPhoneMirroringWindow() else {
+        guard let initialWindowBounds = automation.getiPhoneMirroringWindow() else {
             print("❌ Cannot replay - window not found")
             return
         }
         
         Task {
-            await recorder.replay(recording, in: windowBounds)
+            isReplaying = true
+            replayProgress = 0
+            currentReplayAction = "Starting replay..."
+            
+            // Use the smart replay method that tracks window position
+            await recorder.replay(recording, in: initialWindowBounds) { current, total, description in
+                Task { @MainActor in
+                    replayProgress = Double(current) / Double(total)
+                    currentReplayAction = description
+                }
+            }
+            
+            await MainActor.run {
+                currentReplayAction = "Replay complete!"
+                replayProgress = 1.0
+            }
+            
+            // Keep the completion message visible briefly
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            
+            await MainActor.run {
+                isReplaying = false
+                replayProgress = 0
+                currentReplayAction = ""
+            }
         }
     }
 }
@@ -129,6 +241,8 @@ struct RecordingRow: View {
     let recording: ActionRecorder.Recording
     let onReplay: () -> Void
     let onDelete: () -> Void
+    let onShowDetails: () -> Void
+    var isDisabled: Bool = false
     
     var body: some View {
         HStack {
@@ -147,17 +261,32 @@ struct RecordingRow: View {
             
             Spacer()
             
+            Button(action: onShowDetails) {
+                Image(systemName: "info.circle")
+            }
+            .disabled(isDisabled)
+            .opacity(isDisabled ? 0.5 : 1.0)
+            
             Button(action: onReplay) {
                 Image(systemName: "play.circle")
             }
+            .disabled(isDisabled)
+            .opacity(isDisabled ? 0.5 : 1.0)
             
             Button(action: onDelete) {
                 Image(systemName: "trash")
             }
             .foregroundColor(.red)
+            .disabled(isDisabled)
+            .opacity(isDisabled ? 0.5 : 1.0)
         }
         .padding(8)
         .background(Color.gray.opacity(0.1))
         .cornerRadius(6)
+        .onTapGesture {
+            if !isDisabled {
+                onShowDetails()
+            }
+        }
     }
 }
