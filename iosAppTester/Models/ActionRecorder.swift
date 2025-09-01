@@ -13,6 +13,28 @@ class ActionRecorder: ObservableObject {
     
     // MARK: - Types
     
+    enum ReplayStyle: String, CaseIterable {
+        case human = "Human"
+        case efficient = "Fast"
+        case smart = "Smart"
+        
+        var icon: String {
+            switch self {
+            case .human: return "person.fill"
+            case .efficient: return "hare.fill"
+            case .smart: return "brain"
+            }
+        }
+        
+        var description: String {
+            switch self {
+            case .human: return "Natural speed with all movements"
+            case .efficient: return "Optimized for speed"
+            case .smart: return "Intelligent optimization"
+            }
+        }
+    }
+    
     enum RecordedAction: Codable {
         // Store both absolute and relative positions
         case mouseMove(x: CGFloat, y: CGFloat, relativeX: CGFloat, relativeY: CGFloat)
@@ -354,12 +376,148 @@ class ActionRecorder: ObservableObject {
         lastActionTime = Date()
     }
     
+    // MARK: - Action Filtering
+    
+    private func filterActions(_ actions: [RecordedAction], style: ReplayStyle) -> [RecordedAction] {
+        switch style {
+        case .human:
+            // Return all actions as-is for natural replay
+            return actions
+            
+        case .efficient:
+            // Remove unnecessary movements but KEEP toolbar sequence
+            var filtered: [RecordedAction] = []
+            var foundToolbarSequence = false
+            
+            // First, find if there's a click in toolbar area (Home button)
+            let hasToolbarClick = actions.contains { action in
+                if case .mouseClick(_, _, _, let relY, _) = action {
+                    return relY < 0.1
+                } else if case .mouseDown(_, _, _, let relY) = action {
+                    return relY < 0.1
+                }
+                return false
+            }
+            
+            if hasToolbarClick {
+                // Add essential toolbar activation sequence at the start
+                // Move to center top to trigger toolbar (50% width, 5% height)
+                filtered.append(.mouseMove(x: 0, y: 0, relativeX: 0.5, relativeY: 0.05))
+                filtered.append(.wait(seconds: 0.5)) // Wait for toolbar to appear
+                foundToolbarSequence = true
+            }
+            
+            // Now process the actions
+            var lastMove: RecordedAction?
+            
+            for action in actions {
+                switch action {
+                case .mouseMove(_, _, _, let relY):
+                    if relY < 0.1 && foundToolbarSequence {
+                        // Skip toolbar moves since we added our own
+                        continue
+                    }
+                    lastMove = action
+                    
+                case .mouseClick, .mouseDown, .mouseUp:
+                    // For toolbar clicks, don't add extra moves
+                    if case .mouseClick(_, _, _, let relY, _) = action, relY < 0.1 {
+                        filtered.append(action)
+                    } else if case .mouseDown(_, _, _, let relY) = action, relY < 0.1 {
+                        filtered.append(action)
+                    } else if case .mouseUp(_, _, _, let relY) = action, relY < 0.1 {
+                        filtered.append(action)
+                    } else {
+                        // Non-toolbar clicks - add last move if exists
+                        if let move = lastMove {
+                            filtered.append(move)
+                            lastMove = nil
+                        }
+                        filtered.append(action)
+                    }
+                    
+                case .wait(let seconds):
+                    if !foundToolbarSequence || seconds > 1.0 {
+                        filtered.append(.wait(seconds: min(seconds, 0.5)))
+                    }
+                    
+                default:
+                    filtered.append(action)
+                }
+            }
+            
+            return filtered
+            
+        case .smart:
+            // Intelligent filtering - only essential actions
+            var filtered: [RecordedAction] = []
+            
+            // Analyze what this recording does
+            let hasToolbarClick = actions.contains { action in
+                if case .mouseClick(_, _, _, let relY, _) = action {
+                    return relY < 0.1
+                } else if case .mouseDown(_, _, _, let relY) = action {
+                    return relY < 0.1
+                }
+                return false
+            }
+            
+            // If it uses toolbar, add proper activation sequence
+            if hasToolbarClick {
+                // Standard toolbar activation: hover center-top, wait, then click
+                filtered.append(.mouseMove(x: 0, y: 0, relativeX: 0.5, relativeY: 0.05))
+                filtered.append(.wait(seconds: 0.5))
+                
+                // Find and add the actual toolbar clicks
+                for action in actions {
+                    switch action {
+                    case .mouseClick(_, _, _, let relY, _) where relY < 0.1,
+                         .mouseDown(_, _, _, let relY) where relY < 0.1,
+                         .mouseUp(_, _, _, let relY) where relY < 0.1:
+                        filtered.append(action)
+                    case .keyPress:
+                        filtered.append(action)
+                    default:
+                        break
+                    }
+                }
+            } else {
+                // Non-toolbar recording - just keep clicks and essential moves
+                var lastMove: RecordedAction?
+                
+                for action in actions {
+                    switch action {
+                    case .mouseMove:
+                        lastMove = action
+                    case .mouseClick, .mouseDown, .mouseUp:
+                        if let move = lastMove {
+                            filtered.append(move)
+                            lastMove = nil
+                        }
+                        filtered.append(action)
+                    case .keyPress:
+                        filtered.append(action)
+                    case .wait(let seconds) where seconds > 1.0:
+                        filtered.append(.wait(seconds: 0.5))
+                    default:
+                        break
+                    }
+                }
+            }
+            
+            return filtered
+        }
+    }
+    
     // MARK: - Replay
     
-    func replay(_ recording: Recording, in initialWindowBounds: CGRect, progressHandler: ((Int, Int, String) -> Void)? = nil) async {
-        print("▶️ Replaying: \(recording.name)")
+    func replay(_ recording: Recording, in initialWindowBounds: CGRect, style: ReplayStyle = .human, progressHandler: ((Int, Int, String) -> Void)? = nil) async {
+        print("▶️ Replaying: \(recording.name) in \(style.rawValue) mode")
         print("📐 Original window: \(recording.windowBounds.size), Current: \(initialWindowBounds.size)")
-        print("📦 Total actions: \(recording.actions.count)")
+        
+        // Filter actions based on replay style
+        let actionsToReplay = filterActions(recording.actions, style: style)
+        print("📦 Actions: \(recording.actions.count) original → \(actionsToReplay.count) filtered")
         
         // Ensure iPhone Mirroring window is focused before replay
         if let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.ScreenContinuity").first {
@@ -368,7 +526,7 @@ class ActionRecorder: ObservableObject {
         }
         
         // Smart replay - check window position before each action
-        for (index, action) in recording.actions.enumerated() {
+        for (index, action) in actionsToReplay.enumerated() {
             // Get current window position for each action
             guard let currentWindow = WindowDetector.getiPhoneMirroringWindow() else {
                 print("❌ Window lost during replay at action \(index + 1)")
@@ -393,7 +551,7 @@ class ActionRecorder: ObservableObject {
             print("   Window currently at: origin(\(Int(currentWindow.bounds.origin.x)), \(Int(currentWindow.bounds.origin.y)))")
             
             // Report progress
-            progressHandler?(index + 1, recording.actions.count, action.description)
+            progressHandler?(index + 1, actionsToReplay.count, action.description)
             
             // IMPORTANT: Use the CURRENT window bounds, not the initial ones!
             // This allows replay to work even if the window has moved

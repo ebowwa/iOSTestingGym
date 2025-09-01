@@ -18,6 +18,7 @@ struct ActionRecorderView: View {
     @State private var selectedRecording: ActionRecorder.Recording? = nil
     @State private var showRecordingDetails = false
     @State private var showAllAnalytics = false
+    @State private var replayStyle: ActionRecorder.ReplayStyle = .human
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -137,6 +138,25 @@ struct ActionRecorderView: View {
                         .padding()
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
+                        // Replay Style Selector
+                        HStack {
+                            Text("Replay Mode:")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Picker("", selection: $replayStyle) {
+                                ForEach(ActionRecorder.ReplayStyle.allCases, id: \.self) { style in
+                                    Label(style.rawValue, systemImage: style.icon)
+                                        .tag(style)
+                                }
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .frame(width: 180)
+                            
+                            Spacer()
+                        }
+                        .padding(.bottom, 4)
+                        
                         // Analytics button for all recordings
                         if recorder.recordings.count > 1 {
                             Button(action: { showAllAnalytics = true }) {
@@ -231,8 +251,8 @@ struct ActionRecorderView: View {
             replayProgress = 0
             currentReplayAction = "Starting replay..."
             
-            // Use the smart replay method that tracks window position
-            await recorder.replay(recording, in: initialWindowBounds) { current, total, description in
+            // Use the smart replay method that tracks window position with selected style
+            await recorder.replay(recording, in: initialWindowBounds, style: replayStyle) { current, total, description in
                 Task { @MainActor in
                     replayProgress = Double(current) / Double(total)
                     currentReplayAction = description
