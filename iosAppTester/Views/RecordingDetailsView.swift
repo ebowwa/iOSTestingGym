@@ -357,6 +357,7 @@ struct RecordingDetailsView: View {
         case .mouseDrag: return "Drag"
         case .keyPress: return "Key"
         case .wait: return "Wait"
+        case .windowMoved: return "Window Moved"
         }
     }
     
@@ -408,6 +409,12 @@ struct RecordingDetailsView: View {
             
         case .wait(let seconds):
             return Text("Duration: \(String(format: "%.3f", seconds)) seconds")
+            
+        case .windowMoved(let from, let to):
+            return Text("""
+                From: \(from.origin)
+                To: \(to.origin)
+                """)
         }
     }
 }

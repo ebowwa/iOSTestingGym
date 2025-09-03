@@ -45,6 +45,7 @@ class ActionRecorder: ObservableObject {
                        fromRelX: CGFloat, fromRelY: CGFloat, toRelX: CGFloat, toRelY: CGFloat)
         case keyPress(keyCode: UInt16, modifiers: UInt64)
         case wait(seconds: TimeInterval)
+        case windowMoved(from: CGRect, to: CGRect) // For backward compatibility
         
         var description: String {
             switch self {
@@ -62,6 +63,8 @@ class ActionRecorder: ObservableObject {
                 return "Key press: \(code)"
             case .wait(let seconds):
                 return "Wait \(String(format: "%.1f", seconds))s"
+            case .windowMoved(let from, let to):
+                return "Window moved from \(from.origin) to \(to.origin)"
             }
         }
     }
@@ -73,6 +76,9 @@ class ActionRecorder: ObservableObject {
         var actions: [RecordedAction]
         let recordedAt: Date
         var annotations: [Int: String] // Action index to annotation mapping
+        // Optional fields for backward compatibility
+        var screenshotIds: [UUID]?
+        var locale: LocaleInfo?
         
         init(name: String, windowBounds: CGRect, actions: [RecordedAction], recordedAt: Date, annotations: [Int: String] = [:]) {
             self.id = UUID()
@@ -81,6 +87,20 @@ class ActionRecorder: ObservableObject {
             self.actions = actions
             self.recordedAt = recordedAt
             self.annotations = annotations
+            self.screenshotIds = nil
+            self.locale = nil
+        }
+        
+        // Full initializer for Core Data reconstruction
+        init(id: UUID, name: String, windowBounds: CGRect, actions: [RecordedAction], recordedAt: Date, annotations: [Int: String], screenshotIds: [UUID]? = nil, locale: LocaleInfo? = nil) {
+            self.id = id
+            self.name = name
+            self.windowBounds = windowBounds
+            self.actions = actions
+            self.recordedAt = recordedAt
+            self.annotations = annotations
+            self.screenshotIds = screenshotIds
+            self.locale = locale
         }
         
         var duration: TimeInterval {
@@ -883,52 +903,73 @@ class ActionRecorder: ObservableObject {
         case .wait(let seconds):
             print("🎮 Replay: Wait \(String(format: "%.1f", seconds))s")
             try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            
+        case .windowMoved(let from, let to):
+            print("🎮 Replay: Window moved from \(from.origin) to \(to.origin) - skipping")
+            // Window movement is informational only during replay
         }
     }
     
-    // MARK: - Persistence
+    // MARK: - Persistence (Core Data)
+    
+    private let coreDataManager = CoreDataManager.shared
     
     func saveRecordings() {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let filePath = documentsPath.appendingPathComponent("recordings.json")
-        
-        do {
-            let data = try JSONEncoder().encode(recordings)
-            try data.write(to: filePath)
-            print("💾 Saved \(recordings.count) recordings")
-        } catch {
-            print("❌ Failed to save recordings: \(error)")
+        // Save all recordings to Core Data
+        for recording in recordings {
+            do {
+                try coreDataManager.saveRecording(recording)
+            } catch {
+                print("❌ Failed to save recording '\(recording.name)': \(error)")
+            }
         }
+        print("💾 Saved \(recordings.count) recordings to Core Data")
     }
     
     func loadRecordings() {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let filePath = documentsPath.appendingPathComponent("recordings.json")
-        
         do {
-            let data = try Data(contentsOf: filePath)
-            recordings = try JSONDecoder().decode([Recording].self, from: data)
-            print("📂 Loaded \(recordings.count) recordings")
+            // First, try to migrate any existing JSON file
+            coreDataManager.migrateFromJSON()
+            
+            // Then load from Core Data
+            recordings = try coreDataManager.fetchAllRecordings()
+            print("📂 Loaded \(recordings.count) recordings from Core Data")
         } catch {
-            print("ℹ️ No saved recordings found")
+            print("❌ Failed to load recordings: \(error)")
+            recordings = []
         }
     }
     
     func deleteRecording(_ recording: Recording) {
-        recordings.removeAll { $0.id == recording.id }
-        saveRecordings()
+        do {
+            try coreDataManager.deleteRecording(recording)
+            recordings.removeAll { $0.id == recording.id }
+            print("🗑️ Deleted recording '\(recording.name)'")
+        } catch {
+            print("❌ Failed to delete recording: \(error)")
+        }
     }
     
     func updateRecording(_ recording: Recording) {
-        if let index = recordings.firstIndex(where: { $0.id == recording.id }) {
-            recordings[index] = recording
-            saveRecordings()
+        do {
+            try coreDataManager.updateRecording(recording)
+            if let index = recordings.firstIndex(where: { $0.id == recording.id }) {
+                recordings[index] = recording
+            }
+            print("📝 Updated recording '\(recording.name)'")
+        } catch {
+            print("❌ Failed to update recording: \(error)")
         }
     }
     
     func addRecording(_ recording: Recording) {
-        recordings.append(recording)
-        saveRecordings()
+        do {
+            try coreDataManager.saveRecording(recording)
+            recordings.append(recording)
+            print("➕ Added recording '\(recording.name)'")
+        } catch {
+            print("❌ Failed to add recording: \(error)")
+        }
     }
     
     // MARK: - Window Monitoring

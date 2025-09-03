@@ -169,6 +169,18 @@ struct ActionRecorderView: View {
                             Divider()
                         }
                         
+                        // Export button for iOS
+                        if !recorder.recordings.isEmpty {
+                            Button(action: exportRecordings) {
+                                Label("Export for iOS App", systemImage: "square.and.arrow.up")
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(isReplaying || recorder.isRecording)
+                            
+                            Divider()
+                        }
+                        
                         ScrollView {
                             VStack(alignment: .leading, spacing: 8) {
                             ForEach(recorder.recordings, id: \.id) { recording in
@@ -238,6 +250,10 @@ struct ActionRecorderView: View {
     
     private func stopRecording() {
         showNameAlert = true
+    }
+    
+    private func exportRecordings() {
+        RecordingExporter.exportRecordings(recorder.recordings)
     }
     
     private func replayRecording(_ recording: ActionRecorder.Recording) {

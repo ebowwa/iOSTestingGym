@@ -76,14 +76,20 @@ The mathematical abstraction layer enables:
 
 This allows AI agents to interact with iOS apps as naturally as humans, learning from visual feedback and improving interaction strategies over time.
 
+## ⚠️ Important: iOS Platform Limitations
+
+**See [iOS_AUTOMATION_LIMITATIONS.md](iOS_AUTOMATION_LIMITATIONS.md) for critical information about why iOS apps cannot perform local automation.**
+
+The automation in this project works ONLY from macOS controlling iPhone Mirroring. Creating an iOS app that records and replays touches locally is impossible due to iOS security restrictions.
+
 ## 🔧 Technical Implementation
 
 ### Core Technologies
-- **macOS**: Host platform for iPhone Mirroring
+- **macOS**: Host platform for iPhone Mirroring (required - iOS cannot automate itself)
 - **SwiftUI**: User interface framework
 - **CoreGraphics**: Low-level event synthesis
 - **ScreenCaptureKit**: Screenshot capture
-- **Accessibility API**: System-level automation
+- **Accessibility API**: System-level automation (macOS only)
 
 ### Key Components
 

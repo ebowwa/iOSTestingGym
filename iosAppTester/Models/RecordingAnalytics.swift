@@ -723,6 +723,7 @@ extension ActionRecorder.RecordedAction {
         case .mouseMove: return "mouseMove"
         case .keyPress: return "keyPress"
         case .wait: return "wait"
+        case .windowMoved: return "windowMoved"
         }
     }
     
