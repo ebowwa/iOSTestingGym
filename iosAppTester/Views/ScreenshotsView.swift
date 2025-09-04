@@ -4,6 +4,14 @@
 //
 //  Created by Elijah Arbee on 8/29/25.
 //
+//  IMPORTANT: NSImage Rendering in SwiftUI
+//  ========================================
+//  When displaying NSImage in SwiftUI on macOS, you MUST use:
+//  .renderingMode(.original) after Image(nsImage:)
+//  
+//  Without this modifier, images may appear blank/white even though
+//  the NSImage data is valid. This is a macOS-specific SwiftUI issue.
+//
 
 import SwiftUI
 import UniformTypeIdentifiers
@@ -157,6 +165,7 @@ struct ScreenshotCard: View {
             // Screenshot Image
             ZStack(alignment: .topTrailing) {
                 Image(nsImage: screenshot.image)
+                    .renderingMode(.original)  // CRITICAL: Prevents blank images on macOS
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxHeight: 150)
@@ -275,6 +284,7 @@ struct ScreenshotPreviewView: View {
             // Screenshot Image
             ScrollView([.horizontal, .vertical]) {
                 Image(nsImage: screenshot.image)
+                    .renderingMode(.original)  // CRITICAL: Prevents blank images on macOS
                     .resizable()
                     .aspectRatio(contentMode: .fit)
             }

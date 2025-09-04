@@ -131,7 +131,25 @@ struct AddScenarioView: View {
     @State private var delay: Double = 1.5
     
     var body: some View {
-        NavigationView {
+        SheetView(
+            title: "New Scenario",
+            width: 500,
+            height: 400,
+            onCancel: { dismiss() },
+            onConfirm: {
+                let scenario = TestScenario(
+                    name: name,
+                    description: description,
+                    deviceType: selectedDevice,
+                    delayBeforeCapture: delay,
+                    actions: []
+                )
+                scenarioManager.addScenario(scenario)
+                dismiss()
+            },
+            confirmLabel: "Add",
+            confirmDisabled: name.isEmpty
+        ) {
             Form {
                 Section("Scenario Details") {
                     TextField("Name", text: $name)
@@ -155,31 +173,8 @@ struct AddScenarioView: View {
                     }
                 }
             }
-            .navigationTitle("New Scenario")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        let scenario = TestScenario(
-                            name: name,
-                            description: description,
-                            deviceType: selectedDevice,
-                            delayBeforeCapture: delay,
-                            actions: []
-                        )
-                        scenarioManager.addScenario(scenario)
-                        dismiss()
-                    }
-                    .disabled(name.isEmpty)
-                }
-            }
+            .formStyle(.grouped)
         }
-        .frame(width: 500, height: 400)
     }
 }
 
@@ -189,7 +184,17 @@ struct ScenarioDetailView: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        NavigationView {
+        SheetView(
+            title: "Edit Scenario",
+            width: 500,
+            height: 500,
+            onCancel: { dismiss() },
+            onConfirm: {
+                scenarioManager.updateScenario(scenario)
+                dismiss()
+            },
+            confirmLabel: "Save"
+        ) {
             Form {
                 Section("Scenario Details") {
                     TextField("Name", text: $scenario.name)
@@ -231,23 +236,8 @@ struct ScenarioDetailView: View {
                     }
                 }
             }
-            .navigationTitle("Edit Scenario")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        scenarioManager.updateScenario(scenario)
-                        dismiss()
-                    }
-                }
-            }
+            .formStyle(.grouped)
         }
-        .frame(width: 500, height: 500)
     }
     
     private func actionIcon(for type: TestAction.ActionType) -> String {

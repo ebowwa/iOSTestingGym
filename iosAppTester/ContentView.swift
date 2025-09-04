@@ -10,18 +10,19 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var screenshotManager = ScreenshotManager()
     @StateObject private var localizationManager = LocalizationManager.shared
-    @StateObject private var scenarioManager = TestScenarioManager()
     @StateObject private var automation = iPhoneAutomation()
-    @State private var selectedTab = 0
+    @State private var selectedTab = 1
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Apps Tab
+            // Apps Tab - Commented out for future macOS automation features
+            /*
             AppsView(screenshotManager: screenshotManager)
                 .tabItem {
                     Label("Apps", systemImage: "macwindow")
                 }
                 .tag(0)
+            */
             
             // iPhone Automation Tab
             iPhoneAutomationView(screenshotManager: screenshotManager, automation: automation)
@@ -30,33 +31,21 @@ struct ContentView: View {
                 }
                 .tag(1)
             
-            // Scenarios Tab
-            ScenariosView(scenarioManager: scenarioManager)
-                .tabItem {
-                    Label("Capture Settings", systemImage: "camera.filters")
-                }
-                .tag(2)
-            
-            // Screenshots Tab
+            // Screenshots Tab - Commented out due to rendering issues
+            /*
             ScreenshotsView(screenshotManager: screenshotManager)
                 .tabItem {
                     Label("Screenshots", systemImage: "photo.stack")
                 }
-                .tag(3)
+                .tag(2)
+            */
             
             // Settings Tab
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gear")
                 }
-                .tag(4)
-            
-            // Debug Tab
-            DebugView(screenshotManager: screenshotManager)
-                .tabItem {
-                    Label("Debug", systemImage: "ladybug")
-                }
-                .tag(5)
+                .tag(2)  // Changed from tag(3) to tag(2) since Screenshots is commented out
         }
         .frame(minWidth: 800, minHeight: 500)
     }

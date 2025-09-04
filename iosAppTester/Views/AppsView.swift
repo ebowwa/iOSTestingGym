@@ -231,6 +231,7 @@ struct CaptureProgressView: View {
                         .foregroundColor(.secondary)
                     
                     Image(nsImage: latest.image)
+                        .renderingMode(.original)  // Prevents blank images on macOS
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(maxHeight: 150)

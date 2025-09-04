@@ -182,8 +182,47 @@ class ScreenshotManager: ObservableObject {
                     configuration: configuration
                 )
                 
-                // Convert to NSImage
-                let nsImage = NSImage(cgImage: screenshotImage, size: NSSize(width: window.frame.width, height: window.frame.height))
+                /* DEBUG CODE - COMMENTED OUT
+                print("🔍 DEBUG - CGImage captured:")
+                print("   Width: \(screenshotImage.width)")
+                print("   Height: \(screenshotImage.height)")
+                print("   Bytes per row: \(screenshotImage.bytesPerRow)")
+                print("   Bits per pixel: \(screenshotImage.bitsPerPixel)")
+                print("   Bits per component: \(screenshotImage.bitsPerComponent)")
+                print("   Color space: \(String(describing: screenshotImage.colorSpace))")
+                */
+                
+                // Convert CGImage to NSImage
+                // Using the simple initializer that should work
+                let nsImage = NSImage(cgImage: screenshotImage, size: NSSize(width: screenshotImage.width, height: screenshotImage.height))
+                
+                /* DEBUG CODE - COMMENTED OUT
+                if let tiffData = nsImage.tiffRepresentation {
+                    print("   NSImage TIFF size: \(tiffData.count) bytes")
+                    // Check if it's all white
+                    if let bitmap = NSBitmapImageRep(data: tiffData) {
+                        var isAllWhite = true
+                        let sampleSize = min(100, bitmap.pixelsWide)
+                        for x in 0..<sampleSize {
+                            for y in 0..<sampleSize {
+                                if let color = bitmap.colorAt(x: x, y: y) {
+                                    if color.redComponent < 0.99 || color.greenComponent < 0.99 || color.blueComponent < 0.99 {
+                                        isAllWhite = false
+                                        break
+                                    }
+                                }
+                            }
+                            if !isAllWhite { break }
+                        }
+                        print("   Image content: \(isAllWhite ? "⚠️ ALL WHITE/BLANK" : "✅ Has content")")
+                    }
+                } else {
+                    print("   ❌ No TIFF representation!")
+                }
+                */
+                
+                // Use the actual CGImage dimensions for resolution
+                let actualResolution = CGSize(width: screenshotImage.width, height: screenshotImage.height)
                 
                 let screenshot = Screenshot(
                     id: UUID(),
@@ -194,7 +233,7 @@ class ScreenshotManager: ObservableObject {
                     bundleId: app.bundleIdentifier ?? "",
                     timestamp: Date(),
                     deviceType: scenario.deviceType,
-                    resolution: CGSize(width: window.frame.width, height: window.frame.height)
+                    resolution: actualResolution  // Use actual image dimensions, not window frame
                 )
                 
                 await MainActor.run {

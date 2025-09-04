@@ -26,6 +26,7 @@ struct iPhoneAutomationView: View {
     // Disclosure Group expansion states
     @State private var statusExpanded = true
     @State private var quickActionsExpanded = false
+    @State private var actionRecorderExpanded = true  // Added state for Action Recorder
     @State private var touchpadExpanded = false
     @State private var scenariosExpanded = false
     @State private var customControlsExpanded = false
@@ -130,23 +131,28 @@ struct iPhoneAutomationView: View {
                 .padding(.vertical, 4)
                 
                 // Action Recorder Section
-                DisclosureGroup("Action Recorder", isExpanded: .constant(true)) {
+                DisclosureGroup("Action Recorder", isExpanded: $actionRecorderExpanded) {
                     ActionRecorderView(automation: automation)
                 }
                 .padding(.vertical, 4)
                 
-                // Toolbar Calibration Section
+                // Toolbar Calibration Section - Commented out
+                /*
                 DisclosureGroup("Toolbar Calibration") {
                     ToolbarCalibrationView(automation: automation)
                 }
                 .padding(.vertical, 4)
+                */
                 
+                // Touchpad Control - Commented out
+                /*
                 DisclosureGroup("Touchpad Control", isExpanded: $touchpadExpanded) {
                     TouchpadView(automation: automation, isExpanded: $touchpadExpanded)
                         .frame(height: 300)
                         .padding(.vertical, 4)
                 }
                 .padding(.vertical, 4)
+                */
                 
                 DisclosureGroup("Test Scenarios", isExpanded: $scenariosExpanded) {
                     ForEach(iPhoneTestScenario.defaultScenarios) { scenario in

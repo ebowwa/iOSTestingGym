@@ -67,27 +67,35 @@ class AppFocusManager: ObservableObject {
     }
     
     private func handleAppBecameActive() {
-        isAppActive = true
-        updateFocusState()
-        print("🎯 App became active")
+        DispatchQueue.main.async { [weak self] in
+            self?.isAppActive = true
+            self?.updateFocusState()
+            print("🎯 App became active")
+        }
     }
     
     private func handleAppResignedActive() {
-        isAppActive = false
-        updateFocusState()
-        print("😴 App resigned active - disabling controls")
+        DispatchQueue.main.async { [weak self] in
+            self?.isAppActive = false
+            self?.updateFocusState()
+            print("😴 App resigned active - disabling controls")
+        }
     }
     
     private func handleWindowBecameKey() {
-        isWindowKey = true
-        updateFocusState()
-        print("🪟 Window became key")
+        DispatchQueue.main.async { [weak self] in
+            self?.isWindowKey = true
+            self?.updateFocusState()
+            print("🪟 Window became key")
+        }
     }
     
     private func handleWindowResignedKey() {
-        isWindowKey = false
-        updateFocusState()
-        print("🪟 Window resigned key - disabling controls")
+        DispatchQueue.main.async { [weak self] in
+            self?.isWindowKey = false
+            self?.updateFocusState()
+            print("🪟 Window resigned key - disabling controls")
+        }
     }
     
     private func updateFocusState() {

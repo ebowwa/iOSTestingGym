@@ -78,9 +78,12 @@ This allows AI agents to interact with iOS apps as naturally as humans, learning
 
 ## ⚠️ Important: iOS Platform Limitations
 
-**See [iOS_AUTOMATION_LIMITATIONS.md](iOS_AUTOMATION_LIMITATIONS.md) for critical information about why iOS apps cannot perform local automation.**
+**See [iOS_AUTOMATION_LIMITATIONS.md](iOS_AUTOMATION_LIMITATIONS.md) for software-only limitations.**
 
-The automation in this project works ONLY from macOS controlling iPhone Mirroring. Creating an iOS app that records and replays touches locally is impossible due to iOS security restrictions.
+### 🎯 Breakthrough: Hardware HID Solution
+**See [iOS_HID_AUTOMATION.md](iOS_HID_AUTOMATION.md) and [HID_CONTROLLER_STATUS.md](HID_CONTROLLER_STATUS.md)**
+
+We discovered iOS accepts USB HID devices through AssistiveTouch! Using an ESP32-S3 as a USB HID controller enables real iOS automation without jailbreak. The hardware approach bypasses all software restrictions.
 
 ## 🔧 Technical Implementation
 

@@ -14,6 +14,7 @@ struct SettingsView: View {
     @AppStorage("includeMetadata") private var includeMetadata = true
     @AppStorage("useSystemLocale") private var useSystemLocale = false
     @AppStorage("captureRetries") private var captureRetries = 3
+    @StateObject private var scenarioManager = TestScenarioManager()
     
     var body: some View {
         Form {
@@ -43,6 +44,11 @@ struct SettingsView: View {
                         .monospacedDigit()
                         .frame(width: 50)
                 }
+            }
+            
+            Section("Test Scenarios") {
+                EmbeddedScenariosView(scenarioManager: scenarioManager)
+                    .frame(minHeight: 200, maxHeight: 400)
             }
             
             Section("About") {
