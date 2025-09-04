@@ -26,6 +26,7 @@ struct QuickActionsView: View {
             FocusWindowAction(context: context),
             HomeButtonAction(context: context),
             AppSwitcherOpenerAction(context: context),
+            AppSwitcherCloserAction(context: context),
             ScreenshotAction(context: context)
         ]
     }

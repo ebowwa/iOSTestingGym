@@ -1,18 +1,19 @@
 //
-//  HomeButtonAction.swift
+//  AppSwitcherCloserAction.swift
 //  iosAppTester
 //
-//  Service responsible for simulating Home button press
+//  Service responsible for closing the app switcher
+//  Based on analytics: Closes by clicking at 93% width, 2% height (same as opener)
 //
 
 import SwiftUI
 import CoreGraphics
 
-class HomeButtonAction: QuickAction {
+class AppSwitcherCloserAction: QuickAction {
     private let context: QuickActionContext
     
-    var name: String { "Home" }
-    var icon: String { "house" }
+    var name: String { "Close App Switcher" }
+    var icon: String { "xmark.square.fill" }
     
     var isEnabled: Bool {
         context.automation.isConnected &&
@@ -26,24 +27,27 @@ class HomeButtonAction: QuickAction {
     
     func execute() {
         guard isEnabled else { 
-            print("❌ Home action disabled - check permissions and connection")
+            print("❌ App Switcher Closer action disabled - check permissions and connection")
             return 
         }
         
         guard let windowBounds = context.automation.getiPhoneMirroringWindow() else {
-            print("❌ Cannot press Home - window not found")
+            print("❌ Cannot close App Switcher - window not found")
             return
         }
         
-        // Use the same approach as ActionRecorder which works:
+        print("🔄 Starting App Switcher Closer sequence...")
+        
         // 1. Activate the window first
         _ = WindowDetector.activateiPhoneMirroring()
         Thread.sleep(forTimeInterval: 0.1)
         
-        // 2. Move mouse to hover position to reveal toolbar (middle of window, near top)
+        // 2. Move mouse to hover position to reveal toolbar
         let hoverX = windowBounds.origin.x + (windowBounds.width * 0.5)
         let hoverY = windowBounds.origin.y + (windowBounds.height * 0.05)  // 5% from top for hover
         let hoverPoint = CGPoint(x: hoverX, y: hoverY)
+        
+        print("📍 Hovering at toolbar position: (\(Int(hoverX)), \(Int(hoverY)))")
         
         if let moveEvent = CGEvent(
             mouseEventSource: nil,
@@ -54,16 +58,17 @@ class HomeButtonAction: QuickAction {
             moveEvent.post(tap: .cghidEventTap)
         }
         
-        // 3. Wait for toolbar to appear
+        // 3. Wait for toolbar to appear (500ms based on analytics)
         Thread.sleep(forTimeInterval: 0.5)
         
-        // 4. Click the Home button (85% from left, 2% from top)
-        // Home is at 85%, App Switcher is at 93% (far right)
-        let homeButtonX = windowBounds.origin.x + (windowBounds.width * 0.85)
-        let homeButtonY = windowBounds.origin.y + (windowBounds.height * 0.02)  // 2% from top like other toolbar buttons
-        let clickPoint = CGPoint(x: homeButtonX, y: homeButtonY)
+        // 4. Click to close App Switcher - analytics shows same position as opener (93% width, 2% height)
+        let closerX = windowBounds.origin.x + (windowBounds.width * 0.93)
+        let closerY = windowBounds.origin.y + (windowBounds.height * 0.02)  // 2% from top based on analytics
+        let clickPoint = CGPoint(x: closerX, y: closerY)
         
-        // Click the Home button
+        print("🎯 Clicking to close App Switcher at 93% width, 2% height: (\(Int(clickPoint.x)), \(Int(clickPoint.y)))")
+        
+        // Click to close
         if let downEvent = CGEvent(
             mouseEventSource: nil,
             mouseType: .leftMouseDown,
@@ -84,6 +89,6 @@ class HomeButtonAction: QuickAction {
             upEvent.post(tap: .cghidEventTap)
         }
         
-        print("✅ Home button pressed at (\(Int(clickPoint.x)), \(Int(clickPoint.y)))")
+        print("✅ App Switcher Closer executed - clicked at 93% width, 2% height")
     }
 }
