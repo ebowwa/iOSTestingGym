@@ -314,8 +314,7 @@ struct RecordingDetailsView: View {
         )
         
         // Save the new recording
-        recorder.recordings.append(newRecording)
-        recorder.saveRecordings()
+        recorder.addRecording(newRecording)
         dismiss()
     }
     
@@ -341,10 +340,7 @@ struct RecordingDetailsView: View {
         recording.annotations = newAnnotations
         
         // Save the updated recording
-        if let index = recorder.recordings.firstIndex(where: { $0.id == recording.id }) {
-            recorder.recordings[index] = recording
-            recorder.saveRecordings()
-        }
+        recorder.updateRecording(recording)
         dismiss()
     }
     

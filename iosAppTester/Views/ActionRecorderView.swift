@@ -374,7 +374,7 @@ struct RecordingRow: View {
             // Find and update the recording
             if let index = recorder.recordings.firstIndex(where: { $0.id == recording.id }) {
                 recorder.recordings[index].name = editedName
-                recorder.saveRecordings()
+                recorder.updateRecording(recorder.recordings[index])
             }
         }
         isEditingName = false

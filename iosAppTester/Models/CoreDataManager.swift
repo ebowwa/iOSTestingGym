@@ -20,6 +20,17 @@ class CoreDataManager: ObservableObject {
     // MARK: - Recording Operations
     
     func saveRecording(_ recording: ActionRecorder.Recording) throws {
+        // Check if recording already exists
+        let request: NSFetchRequest<RecordingEntity> = RecordingEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", recording.id as CVarArg)
+        
+        let existingEntities = try context.fetch(request)
+        
+        if existingEntities.count > 0 {
+            print("⚠️ Recording '\(recording.name)' already exists in Core Data, skipping save")
+            return
+        }
+        
         let entity = RecordingEntity(context: context)
         
         entity.id = recording.id
@@ -143,6 +154,41 @@ class CoreDataManager: ObservableObject {
         try context.execute(deleteRequest)
         try save()
         print("🗑️ Deleted all recordings from Core Data")
+    }
+    
+    // MARK: - Cleanup Operations
+    
+    func removeDuplicateRecordings() throws {
+        let request: NSFetchRequest<RecordingEntity> = RecordingEntity.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(key: "recordedAt", ascending: false)]
+        
+        let entities = try context.fetch(request)
+        var seenIds = Set<UUID>()
+        var duplicatesToDelete: [RecordingEntity] = []
+        
+        for entity in entities {
+            guard let id = entity.id else { continue }
+            
+            if seenIds.contains(id) {
+                // This is a duplicate
+                duplicatesToDelete.append(entity)
+                print("🔍 Found duplicate: '\(entity.name ?? "Unknown")' with ID: \(id)")
+            } else {
+                seenIds.insert(id)
+            }
+        }
+        
+        // Delete duplicates
+        for duplicate in duplicatesToDelete {
+            context.delete(duplicate)
+        }
+        
+        if !duplicatesToDelete.isEmpty {
+            try save()
+            print("🗑️ Removed \(duplicatesToDelete.count) duplicate recordings")
+        } else {
+            print("✅ No duplicate recordings found")
+        }
     }
     
     // MARK: - Migration from JSON

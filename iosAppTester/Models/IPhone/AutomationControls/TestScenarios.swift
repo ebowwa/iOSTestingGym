@@ -26,6 +26,7 @@ struct iPhoneTestScenarioImpl: AutomationScenario, Identifiable {
             PredefinedScenarios.typeAndSearch,
             PredefinedScenarios.navigateBack,
             PredefinedScenarios.switchApps,
+            PredefinedScenarios.appSwitcherOpener,
             PredefinedScenarios.fillForm
         ]
     }
@@ -140,6 +141,18 @@ struct PredefinedScenarios {
         delayBetweenActions: 0.5
     )
     
+    static let appSwitcherOpener = iPhoneTestScenarioImpl(
+        name: "App Switcher Opener",
+        description: "Opens the app switcher with proper toolbar hover and click",
+        actions: [
+            .wait(0.1),  // Initial activation wait
+            .wait(0.5),  // Toolbar appear wait
+            .openAppSwitcher,
+            .wait(2.0)   // Wait to see result
+        ],
+        delayBetweenActions: 0.1
+    )
+    
     static let fillForm = iPhoneTestScenarioImpl(
         name: "Fill Form",
         description: "Fill out a form with multiple fields",
@@ -185,6 +198,7 @@ struct PredefinedScenarios {
             typeAndSearch,
             navigateBack,
             switchApps,
+            appSwitcherOpener,
             fillForm,
             takeMultipleScreenshots
         ]
@@ -219,13 +233,13 @@ enum ScenarioCategory: String, CaseIterable {
     var scenarios: [iPhoneTestScenarioImpl] {
         switch self {
         case .navigation:
-            return [PredefinedScenarios.openApp, PredefinedScenarios.navigateBack, PredefinedScenarios.switchApps]
+            return [PredefinedScenarios.openApp, PredefinedScenarios.navigateBack, PredefinedScenarios.switchApps, PredefinedScenarios.appSwitcherOpener]
         case .input:
             return [PredefinedScenarios.typeAndSearch, PredefinedScenarios.fillForm]
         case .gestures:
             return [PredefinedScenarios.scrollFeed]
         case .system:
-            return [PredefinedScenarios.openApp, PredefinedScenarios.switchApps]
+            return [PredefinedScenarios.openApp, PredefinedScenarios.switchApps, PredefinedScenarios.appSwitcherOpener]
         case .testing:
             return [PredefinedScenarios.takeMultipleScreenshots]
         }

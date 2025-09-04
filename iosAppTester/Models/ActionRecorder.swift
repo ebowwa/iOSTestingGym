@@ -208,7 +208,13 @@ class ActionRecorder: ObservableObject {
                 recordedAt: Date()
             )
             recordings.append(recording)
-            saveRecordings()
+            // Only save the new recording, not all recordings
+            do {
+                try coreDataManager.saveRecording(recording)
+                print("💾 Saved new recording '\(recording.name)' to Core Data")
+            } catch {
+                print("❌ Failed to save recording: \(error)")
+            }
             
             print("⏹ Recording stopped: \(currentActions.count) actions recorded")
             
@@ -915,21 +921,18 @@ class ActionRecorder: ObservableObject {
     private let coreDataManager = CoreDataManager.shared
     
     func saveRecordings() {
-        // Save all recordings to Core Data
-        for recording in recordings {
-            do {
-                try coreDataManager.saveRecording(recording)
-            } catch {
-                print("❌ Failed to save recording '\(recording.name)': \(error)")
-            }
-        }
-        print("💾 Saved \(recordings.count) recordings to Core Data")
+        // This method is now deprecated - recordings are saved individually
+        // Keeping it for compatibility but it doesn't re-save existing recordings
+        print("⚠️ saveRecordings() called - recordings are now saved individually")
     }
     
     func loadRecordings() {
         do {
             // First, try to migrate any existing JSON file
             coreDataManager.migrateFromJSON()
+            
+            // Clean up any duplicates
+            try coreDataManager.removeDuplicateRecordings()
             
             // Then load from Core Data
             recordings = try coreDataManager.fetchAllRecordings()
