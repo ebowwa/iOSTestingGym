@@ -2,8 +2,8 @@
 //  AppSwitcherOpenerAction.swift
 //  iosAppTester
 //
-//  Service responsible for opening the app switcher with correct positioning
-//  Based on analytics: App Switcher opens by clicking at 93% width, 2% height (toolbar right side)
+//  Service responsible for toggling the app switcher (open/close)
+//  Based on analytics: App Switcher toggles by clicking at 93% width, 2% height (toolbar right side)
 //
 
 import SwiftUI
@@ -12,7 +12,7 @@ import CoreGraphics
 class AppSwitcherOpenerAction: QuickAction {
     private let context: QuickActionContext
     
-    var name: String { "App Switcher Opener" }
+    var name: String { "App Switcher" }
     var icon: String { "square.stack.3d.up.fill" }
     
     var isEnabled: Bool {
@@ -36,7 +36,7 @@ class AppSwitcherOpenerAction: QuickAction {
             return
         }
         
-        print("🔄 Starting App Switcher Opener sequence...")
+        print("🔄 Toggling App Switcher...")
         
         // 1. Activate the window first
         _ = WindowDetector.activateiPhoneMirroring()
@@ -67,7 +67,7 @@ class AppSwitcherOpenerAction: QuickAction {
         let appSwitcherY = windowBounds.origin.y + (windowBounds.height * 0.02)  // 2% from top based on analytics
         let clickPoint = CGPoint(x: appSwitcherX, y: appSwitcherY)
         
-        print("🎯 Clicking to open App Switcher at 93% width, 2% height: (\(Int(clickPoint.x)), \(Int(clickPoint.y)))")
+        print("🎯 Clicking App Switcher toggle at 93% width, 2% height: (\(Int(clickPoint.x)), \(Int(clickPoint.y)))")
         
         // Click the App Switcher button
         if let downEvent = CGEvent(
@@ -90,6 +90,6 @@ class AppSwitcherOpenerAction: QuickAction {
             upEvent.post(tap: .cghidEventTap)
         }
         
-        print("✅ App Switcher Opener executed - clicked at 93% width, 2% height")
+        print("✅ App Switcher toggled - clicked at 93% width, 2% height")
     }
 }
