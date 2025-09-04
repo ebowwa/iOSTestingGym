@@ -3,7 +3,7 @@
 //  iosAppTester
 //
 //  Service responsible for opening the app switcher with correct positioning
-//  Based on analytics showing home button works at 85-86% width
+//  Based on analytics: App Switcher opens by clicking at 85% width, 7% height (Home button area)
 //
 
 import SwiftUI
@@ -61,13 +61,13 @@ class AppSwitcherOpenerAction: QuickAction {
         // 3. Wait for toolbar to appear (500ms based on analytics)
         Thread.sleep(forTimeInterval: 0.5)
         
-        // 4. Click the App Switcher button at the correct position
-        // App Switcher is at 52% (middle-right), Home button is at 85-86%
-        let appSwitcherX = windowBounds.origin.x + (windowBounds.width * 0.52)
-        let appSwitcherY = windowBounds.origin.y + (windowBounds.height * 0.02)  // 2% from top, same as Home button
+        // 4. Click to open App Switcher - analytics shows this is at 85% width, 7% height (same as Home position)
+        // The App Switcher opens by clicking the Home button area in the toolbar
+        let appSwitcherX = windowBounds.origin.x + (windowBounds.width * 0.85)
+        let appSwitcherY = windowBounds.origin.y + (windowBounds.height * 0.07)  // 7% from top based on analytics
         let clickPoint = CGPoint(x: appSwitcherX, y: appSwitcherY)
         
-        print("🎯 Clicking App Switcher at 52% width: (\(Int(clickPoint.x)), \(Int(clickPoint.y)))")
+        print("🎯 Clicking to open App Switcher at 85% width, 7% height: (\(Int(clickPoint.x)), \(Int(clickPoint.y)))")
         
         // Click the App Switcher button
         if let downEvent = CGEvent(
@@ -90,6 +90,6 @@ class AppSwitcherOpenerAction: QuickAction {
             upEvent.post(tap: .cghidEventTap)
         }
         
-        print("✅ App Switcher Opener executed - button pressed at 52% width, 2% height")
+        print("✅ App Switcher Opener executed - clicked at 85% width, 7% height")
     }
 }

@@ -57,9 +57,9 @@ class HomeButtonAction: QuickAction {
         // 3. Wait for toolbar to appear
         Thread.sleep(forTimeInterval: 0.5)
         
-        // 4. Click the Home button (85% from left edge, 2% from top - based on user's actual recordings)
+        // 4. Click the Home button (85% from left edge, 7% from top - based on analytics)
         let homeButtonX = windowBounds.origin.x + (windowBounds.width * 0.85)
-        let homeButtonY = windowBounds.origin.y + (windowBounds.height * 0.02)  // 2% from top, not 30 pixels
+        let homeButtonY = windowBounds.origin.y + (windowBounds.height * 0.07)  // 7% from top based on analytics
         let clickPoint = CGPoint(x: homeButtonX, y: homeButtonY)
         
         // Click the Home button
