@@ -43,8 +43,8 @@ class AppSwitcherOpenerAction: QuickAction {
         Thread.sleep(forTimeInterval: 0.1)
         
         // 2. Move mouse to hover position to reveal toolbar
-        let hoverX = windowBounds.origin.x + windowBounds.width / 2
-        let hoverY = windowBounds.origin.y + 30
+        let hoverX = windowBounds.origin.x + (windowBounds.width * 0.5)
+        let hoverY = windowBounds.origin.y + (windowBounds.height * 0.05)  // 5% from top for hover
         let hoverPoint = CGPoint(x: hoverX, y: hoverY)
         
         print("📍 Hovering at toolbar position: (\(Int(hoverX)), \(Int(hoverY)))")
@@ -64,7 +64,7 @@ class AppSwitcherOpenerAction: QuickAction {
         // 4. Click the App Switcher button at the correct position
         // App Switcher is at 52% (middle-right), Home button is at 85-86%
         let appSwitcherX = windowBounds.origin.x + (windowBounds.width * 0.52)
-        let appSwitcherY = windowBounds.origin.y + 30
+        let appSwitcherY = windowBounds.origin.y + (windowBounds.height * 0.02)  // 2% from top, same as Home button
         let clickPoint = CGPoint(x: appSwitcherX, y: appSwitcherY)
         
         print("🎯 Clicking App Switcher at 52% width: (\(Int(clickPoint.x)), \(Int(clickPoint.y)))")
@@ -90,6 +90,6 @@ class AppSwitcherOpenerAction: QuickAction {
             upEvent.post(tap: .cghidEventTap)
         }
         
-        print("✅ App Switcher Opener executed - button pressed at 52% width")
+        print("✅ App Switcher Opener executed - button pressed at 52% width, 2% height")
     }
 }
