@@ -57,9 +57,10 @@ class HomeButtonAction: QuickAction {
         // 3. Wait for toolbar to appear
         Thread.sleep(forTimeInterval: 0.5)
         
-        // 4. Click the Home button (85% from left edge, 7% from top - based on analytics)
-        let homeButtonX = windowBounds.origin.x + (windowBounds.width * 0.85)
-        let homeButtonY = windowBounds.origin.y + (windowBounds.height * 0.07)  // 7% from top based on analytics
+        // 4. Click the Home button (center of toolbar, 2% from top)
+        // Home is typically center, App Switcher is on the right at 93%
+        let homeButtonX = windowBounds.origin.x + (windowBounds.width * 0.50)
+        let homeButtonY = windowBounds.origin.y + (windowBounds.height * 0.02)  // 2% from top like other toolbar buttons
         let clickPoint = CGPoint(x: homeButtonX, y: homeButtonY)
         
         // Click the Home button
