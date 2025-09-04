@@ -16,26 +16,21 @@ struct iPhoneAutomationView: View {
         self.screenshotManager = screenshotManager
         self.automation = automation ?? iPhoneAutomation()
     }
-    @State private var selectedScenario: iPhoneTestScenario?
-    @State private var isRunning = false
     @State private var customX: String = "200"
     @State private var customY: String = "400"
     @State private var customText: String = ""
     @State private var savedCursorPosition: CGPoint? = nil
     
     // Disclosure Group expansion states
-    @State private var statusExpanded = true
+    @State private var statusExpanded = false
     @State private var quickActionsExpanded = false
-    @State private var actionRecorderExpanded = true  // Added state for Action Recorder
+    @State private var actionRecorderExpanded = false
     @State private var touchpadExpanded = false
-    @State private var scenariosExpanded = false
     @State private var customControlsExpanded = false
     @State private var automationLogExpanded = false
     
     var body: some View {
-        NavigationView {
-            // Sidebar
-            List {
+        List {
                 // Permission Status
                 if !automation.hasAccessibilityPermission && automation.permissionCheckComplete {
                     Section("⚠️ Permission Required") {
@@ -123,11 +118,14 @@ struct iPhoneAutomationView: View {
                 }
                 .padding(.vertical, 4)
                 
-                QuickActionsView(
-                    automation: automation,
-                    screenshotManager: screenshotManager,
-                    isExpanded: $quickActionsExpanded
-                )
+                // Quick Actions Section
+                DisclosureGroup("Quick Actions", isExpanded: $quickActionsExpanded) {
+                    QuickActionsView(
+                        automation: automation,
+                        screenshotManager: screenshotManager,
+                        isExpanded: .constant(true)  // Always expanded within the disclosure group
+                    )
+                }
                 .padding(.vertical, 4)
                 
                 // Action Recorder Section
@@ -154,26 +152,6 @@ struct iPhoneAutomationView: View {
                 .padding(.vertical, 4)
                 */
                 
-                DisclosureGroup("Test Scenarios", isExpanded: $scenariosExpanded) {
-                    ForEach(iPhoneTestScenario.defaultScenarios) { scenario in
-                        Button(action: { runScenario(scenario) }) {
-                            VStack(alignment: .leading) {
-                                Text(scenario.name)
-                                    .font(.headline)
-                                Text(scenario.description)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || isRunning || !focusManager.canAcceptInput)
-                    }
-                }
-            }
-            .listStyle(SidebarListStyle())
-            .frame(minWidth: 250)
-            
-            // Main Content
-            VStack {
                 // Custom Controls
                 DisclosureGroup("Custom Controls", isExpanded: $customControlsExpanded) {
                     VStack(spacing: 15) {
@@ -247,9 +225,8 @@ struct iPhoneAutomationView: View {
                         }
                         .disabled(!automation.isConnected || !automation.hasAccessibilityPermission || !focusManager.canAcceptInput)
                     }
-                    .padding()
                 }
-                .padding()
+                .padding(.vertical, 4)
                 
                 // Automation Log
                 DisclosureGroup("Automation Log", isExpanded: $automationLogExpanded) {
@@ -272,12 +249,11 @@ struct iPhoneAutomationView: View {
                     }
                     .frame(maxHeight: 300)
                 }
-                .padding()
-                
-                Spacer()
+                .padding(.vertical, 4)
             }
-        }
-        .navigationTitle("iPhone Automation")
+        .listStyle(InsetListStyle())
+        .frame(minWidth: 700, idealWidth: 800)
+        .padding(.vertical, 10)
         .onAppear {
             automation.checkAccessibilityPermission()
             _ = automation.detectiPhoneMirroring()
@@ -386,51 +362,6 @@ struct iPhoneAutomationView: View {
                 if let windowInfo = WindowDetector.getiPhoneMirroringWindow() {
                     moveEvent.postToPid(windowInfo.processID)
                 }
-            }
-        }
-    }
-    
-    private func runScenario(_ scenario: iPhoneTestScenario) {
-        guard let windowBounds = automation.getiPhoneMirroringWindow() else { return }
-        
-        isRunning = true
-        
-        // Ensure window is focused before starting the scenario
-        automation.ensureWindowFocused()
-        
-        Task {
-            for action in scenario.actions {
-                switch action {
-                case .tap(let x, let y):
-                    automation.tapAt(x: x, y: y, in: windowBounds)
-                case .swipe(let from, let to):
-                    automation.swipe(from: from, to: to, in: windowBounds)
-                case .typeText(let text):
-                    _ = automation.typeText(text)
-                case .pasteText(let text):
-                    _ = automation.pasteText(text)
-                case .pressHome:
-                    _ = automation.pressHome()
-                case .openAppSwitcher:
-                    _ = automation.openAppSwitcher()
-                case .wait(let duration):
-                    try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
-                case .screenshot:
-                    let context = DefaultQuickActionContext(
-                        automation: automation,
-                        screenshotManager: screenshotManager,
-                        focusManager: focusManager
-                    )
-                    let screenshotAction = ScreenshotAction(context: context)
-                    screenshotAction.execute()
-                }
-                
-                // Delay between actions
-                try? await Task.sleep(nanoseconds: UInt64(scenario.delayBetweenActions * 1_000_000_000))
-            }
-            
-            await MainActor.run {
-                isRunning = false
             }
         }
     }

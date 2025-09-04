@@ -1,6 +1,6 @@
 # iOS Testing Gym 🏋️‍♂️
 
-An OpenAI Gym-like environment for iOS app testing and automation through iPhone Mirroring on macOS.
+Automation framework for iOS app testing through iPhone Mirroring on macOS, with a vision toward reinforcement learning integration.
 
 ## Demo
 
@@ -8,82 +8,69 @@ An OpenAI Gym-like environment for iOS app testing and automation through iPhone
 
 *Click the image above to watch the demo video (MP4, 8.3MB)*
 
-## 🎯 Core Vision
+## 🎯 What It Does Now
 
-A **reinforcement learning-ready environment** for iOS app testing where:
-- **Environment**: iPhone Mirroring on macOS acts as the controlled environment
-- **Actions**: Discrete action space (tap, swipe, type, paste, home, app switcher)
-- **Observations**: Screenshots serve as state observations (visual feedback)
-- **Episodes**: Test scenarios define sequences of actions
-- **Rewards**: Could be derived from UI state changes, successful navigation, or task completion
+**iOS Testing Gym** provides:
+- **Record & Replay**: Capture and replay user interactions with iPhone Mirroring
+- **Relative Positioning**: Actions work even when window moves or resizes  
+- **Screenshot Automation**: Capture screenshots for documentation or testing
+- **Action Editing**: Modify recorded sequences, add annotations
+- **Quick Actions**: One-click access to common tasks (Home, App Switcher)
+- **Persistent Storage**: Save and organize test recordings
 
-## 🏗️ Architecture Components
+## 🔮 Future Vision: OpenAI Gym for iOS
 
-### 1. iPhone Mirroring Automation Layer
-- Direct control of iPhone via macOS's iPhone Mirroring feature
-- Window detection and focus management
-- Connection quality monitoring
-- Accessibility API integration
+The long-term goal is creating a reinforcement learning environment for iOS testing. See [VISION.md](docs/VISION.md) for the complete roadmap.
 
-### 2. Action Space
-- **Mouse Control**: Taps, swipes, clicks
-- **Keyboard Input**: Typing, shortcuts
-- **System Controls**: Home button, app switcher
-- **Gesture Recognition**: Complex gesture patterns
+## 🏗️ Current Features
 
-### 3. Observation Space
-- Screenshot capture via ScreenCaptureKit
-- Multi-locale support for internationalization testing
-- Device-specific resolution handling
-- Organized export formats (flat, hierarchical, App Store ready)
+### iPhone Mirroring Control
+- Window detection and automatic focus management
+- Connection monitoring with quality indicators
+- Accessibility permission handling
 
-### 4. Mathematical Control Framework
-- **Kalman Filtering**: Smooths noisy touch input, predicts next position
-- **Spring-Damper Dynamics**: Natural cursor movement physics
-- **Finite State Machines**: Control flow management
-- **Gesture Recognition**: $1 algorithm for pattern matching
-- **Coordinate Transformations**: Maps between touchpad and screen spaces
-- **Probability Distributions**: Heat maps of touch patterns
-- **Signal Processing**: Low-pass filters for input smoothing
-- **Attractor Fields**: Snap-to-grid UI element targeting
+### Action Recording & Replay  
+- Record user interactions with relative positioning
+- Edit and annotate recorded sequences
+- Three replay modes: Human (natural speed), Fast, Smart
+- Export/import recordings for sharing
 
-## 🤖 Why It's Like OpenAI Gym
+### Automation Actions
+- **Taps & Clicks**: Precise coordinate-based interaction
+- **Swipes**: Directional gestures and scrolling
+- **Text Input**: Type or paste text
+- **System Controls**: Home button, App Switcher
 
-This framework creates a **Gym environment for iOS apps** where:
+### Screenshot Management
+- Capture screenshots during automation
+- Multi-locale support
+- Export formats: Flat, Organized, App Store Connect ready
 
-1. **RL agents can learn** to navigate apps, complete tasks, or test UI flows
-2. **State representation is visual** (screenshots) - perfect for vision-based RL
-3. **Action space is discrete** and well-defined
-4. **Episodes are configurable** via test scenarios
-5. **Mathematical framework** provides sophisticated control suitable for learning algorithms
+### Mathematical Components (Available)
+The project includes advanced mathematical components for future integration. See [TECHNICAL.md](docs/TECHNICAL.md) for details on:
+- Signal processing (Kalman filter, low-pass filter)
+- Gesture recognition algorithms  
+- Coordinate transformation systems
+- Dynamics simulation frameworks
 
-## 🚀 Potential Applications
 
-- **Automated UI Testing**: Train agents to explore app UIs and find bugs
-- **Accessibility Testing**: Verify app usability for different interaction patterns
-- **Localization QA**: Automated screenshot generation for all locales
-- **User Flow Optimization**: Learn optimal paths through app workflows
-- **Regression Testing**: Detect UI changes between app versions
-- **Performance Testing**: Monitor app responsiveness under various interaction patterns
+## 🚀 Use Cases
 
-## 🧮 Mathematical Sophistication
+- **Automated Testing**: Record once, replay across different scenarios
+- **Screenshot Generation**: Capture App Store screenshots for all devices/locales
+- **Regression Testing**: Verify UI behavior after changes
+- **Demo Creation**: Record perfect app demonstrations
+- **Repetitive Task Automation**: Automate routine testing workflows
 
-The mathematical abstraction layer enables:
-- **Predictive touch control** (Kalman filter anticipates user intent)
-- **Natural gesture synthesis** (Spring dynamics, Bezier curves)
-- **Intelligent UI interaction** (Attractor fields for element targeting)
-- **Noise-resistant input** (Signal processing pipeline)
-
-This allows AI agents to interact with iOS apps as naturally as humans, learning from visual feedback and improving interaction strategies over time.
 
 ## ⚠️ Important: iOS Platform Limitations
 
 **See [iOS_AUTOMATION_LIMITATIONS.md](iOS_AUTOMATION_LIMITATIONS.md) for software-only limitations.**
 
-### 🎯 Breakthrough: Hardware HID Solution
-**See [iOS_HID_AUTOMATION.md](iOS_HID_AUTOMATION.md) and [HID_CONTROLLER_STATUS.md](HID_CONTROLLER_STATUS.md)**
+### 🔬 Hardware HID Research (Experimental)
+**See [HID_CONTROLLER_STATUS.md](docs/HID_CONTROLLER_STATUS.md)**
 
-We discovered iOS accepts USB HID devices through AssistiveTouch! Using an ESP32-S3 as a USB HID controller enables real iOS automation without jailbreak. The hardware approach bypasses all software restrictions.
+Exploring hardware solutions using ESP32-S3 as a USB HID controller for physical device control. Currently in research phase.
 
 ## 🔧 Technical Implementation
 
@@ -143,43 +130,41 @@ screenshotManager.captureAllScreenshots(
 )
 ```
 
-## 🔬 Research Applications
 
-This framework enables research in:
-- **Human-Computer Interaction**: Study user interaction patterns
-- **UI/UX Optimization**: A/B testing through automated exploration
-- **Accessibility Research**: Evaluate app usability for diverse users
-- **ML/AI Testing**: Train models to test like humans
-- **Quality Assurance**: Automated regression and compatibility testing
-
-## 📊 Data Collection
-
-The framework collects:
-- Visual states (screenshots)
-- Action sequences
-- Timing information
-- Touch heat maps
-- Gesture patterns
-- Connection quality metrics
 
 ## 🚦 Getting Started
 
 ### Prerequisites
-- macOS 15.0 or later
+- macOS 15.0 (Sequoia) or later - required for iPhone Mirroring
 - Xcode 15.0 or later
 - iPhone with iOS 17.0 or later
-- iPhone Mirroring enabled
+- iPhone and Mac on same Apple ID
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/ebowwa/iOSTestingGym.git
+cd iOSTestingGym
+
+# Open in Xcode
+open iosAppTester.xcodeproj
+```
 
 ### Setup
-1. Clone the repository
-2. Open `iosAppTester.xcodeproj` in Xcode
-3. Grant accessibility permissions when prompted
-4. Enable iPhone Mirroring on your Mac
-5. Run the application
+1. Build and run the app in Xcode (`Cmd+R`)
+2. Grant accessibility permissions when prompted
+3. Enable iPhone Mirroring:
+   - Open iPhone Mirroring from Applications or Spotlight
+   - Sign in with your Apple ID
+   - Select your iPhone
+4. The app will detect the iPhone Mirroring window automatically
 
-### Permissions Required
-- **Accessibility**: For automation control
-- **Screen Recording**: For screenshot capture
+### Required Permissions
+- **Accessibility**: System Settings > Privacy & Security > Accessibility
+- **Screen Recording**: System Settings > Privacy & Security > Screen Recording
+
+The app will prompt for these permissions on first launch.
 
 ## 📸 Screenshot Testing Features
 
@@ -199,44 +184,62 @@ The framework collects:
 - **After 2 Seconds**: Allows time for UI interactions
 - **After 5 Seconds**: For complex interactions or animations
 
-## 🔮 Future Possibilities
+## 🔮 Roadmap
 
-- **RL Agent Integration**: Connect to popular RL frameworks
-- **Computer Vision**: Add object detection for UI elements
-- **Natural Language**: Voice command integration
-- **Cloud Testing**: Distributed testing across multiple devices
-- **Analytics Dashboard**: Real-time testing metrics and insights
+See [VISION.md](docs/VISION.md) for the complete roadmap including OpenAI Gym integration and advanced features.
 
-## 🏆 Key Innovation
+## 🏆 Key Features
 
-This project bridges the gap between:
-- **Traditional UI testing** (scripted, brittle)
-- **Modern AI approaches** (learning, adaptive)
-- **Mathematical control theory** (precise, predictable)
+- **Relative Positioning**: Recordings adapt to window movement and resizing
+- **Visual Feedback**: See what's being recorded and replayed in real-time
+- **Persistent Storage**: CoreData backend for managing recordings
+- **Export/Import**: Share recordings as reusable test cases
+- **No Jailbreak Required**: Works with standard iPhone Mirroring
 
-The result is a powerful platform for the next generation of iOS app testing, where AI agents can learn to test apps like human QA engineers, but with the consistency and scale only automation can provide.
+## 📦 Project Structure
 
-## Development
+```
+iosAppTester/
+├── Models/           # Core automation logic
+│   ├── ActionRecorder.swift      # Recording/replay system
+│   ├── iPhoneAutomation.swift    # iPhone Mirroring control
+│   └── ScreenshotManager.swift   # Screenshot capture
+├── Views/            # SwiftUI interface
+├── QuickActions/     # One-click automation actions
+├── Mathematics/      # Mathematical components (future integration)
+└── docs/            # Documentation
+    ├── ARCHITECTURE.md         # System architecture
+    ├── RECORD_REPLAY_VISION.md # Record/replay roadmap
+    ├── TECHNICAL.md           # Mathematical framework
+    └── VISION.md             # Future vision & roadmap
+```
 
-The app uses:
-- SwiftUI for the interface
-- ScreenCaptureKit for screenshot capture
-- Modern Swift concurrency (async/await)
-- CoreGraphics for event synthesis
-- Mathematical abstractions for control theory
+## 📝 Documentation
 
-## License
-
-MIT License
-
-## Author
-
-Created by Elijah Arbee
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - System architecture and coordinate system
+- [RECORD_REPLAY_VISION.md](docs/RECORD_REPLAY_VISION.md) - Advanced automation features roadmap
+- [TECHNICAL.md](docs/TECHNICAL.md) - Mathematical components documentation
+- [VISION.md](docs/VISION.md) - OpenAI Gym integration and future vision
+- [iOS_AUTOMATION_LIMITATIONS.md](docs/iOS_AUTOMATION_LIMITATIONS.md) - Platform limitations
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
+Contributions are welcome! Key areas:
+- Improving record/replay functionality
+- Adding new Quick Actions
+- OpenAI Gym environment wrapper (see [VISION.md](docs/VISION.md))
+- Hardware HID controller development
+
+Please open an issue to discuss major changes.
+
+## 📜 License
+
+MIT License
+
+## 퉰f️ Author
+
+Created by Elijah Arbee
 
 ---
 
-*Built with the vision of making iOS app testing as sophisticated as training AI agents in virtual environments.*
+*Making iOS app testing accessible through macOS automation, with a vision toward intelligent, learning-based testing.*

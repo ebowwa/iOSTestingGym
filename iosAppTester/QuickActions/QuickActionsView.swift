@@ -32,14 +32,12 @@ struct QuickActionsView: View {
     }
     
     var body: some View {
-        DisclosureGroup("Quick Actions", isExpanded: $isExpanded) {
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(actions.indices, id: \.self) { index in
-                    QuickActionButton(action: actions[index])
-                }
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(actions.indices, id: \.self) { index in
+                QuickActionButton(action: actions[index])
             }
-            .padding(.vertical, 4)
         }
+        .padding(.vertical, 4)
     }
 }
 
