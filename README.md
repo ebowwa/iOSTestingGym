@@ -10,99 +10,54 @@ Automation framework for iOS app testing through iPhone Mirroring on macOS, with
 
 ## 🎯 What It Does
 
-**iOS Testing Gym** automates iOS app testing through iPhone Mirroring on macOS:
-- **Record & Replay** user interactions with relative positioning
-- **Screenshot Automation** for App Store and documentation
-- **Quick Actions** for common testing tasks
-- **Persistent Storage** of test recordings
+Automates iOS app testing through iPhone Mirroring on macOS. Record and replay user interactions, capture screenshots, and automate repetitive testing tasks.
 
-See [FEATURES.md](docs/FEATURES.md) for the complete feature list.
+➡️ [See all features](docs/FEATURES.md)
 
 ## 🔮 Vision
 
-Long-term goal: Create an OpenAI Gym environment for iOS testing with reinforcement learning. See [VISION.md](docs/VISION.md) for the roadmap.
+Building toward an OpenAI Gym environment for iOS testing with reinforcement learning.
+
+➡️ [Read the roadmap](docs/VISION.md)
 
 
-## ⚠️ Platform Limitations
+## ⚠️ Requirements
 
-- **iOS cannot automate itself** - Requires macOS with iPhone Mirroring
-- See [iOS_AUTOMATION_LIMITATIONS.md](docs/iOS_AUTOMATION_LIMITATIONS.md) for details
-- Hardware HID research in progress: [HID_CONTROLLER_STATUS.md](docs/HID_CONTROLLER_STATUS.md)
+- macOS 15.0+ with iPhone Mirroring
+- iPhone with iOS 17.0+
+- Same Apple ID on both devices
+
+➡️ [Platform limitations](docs/iOS_AUTOMATION_LIMITATIONS.md)
 
 
 
-## 🚦 Getting Started
-
-### Prerequisites
-- macOS 15.0 (Sequoia) or later - required for iPhone Mirroring
-- Xcode 15.0 or later
-- iPhone with iOS 17.0 or later
-- iPhone and Mac on same Apple ID
-
-### Installation
+## 🚦 Quick Start
 
 ```bash
-# Clone the repository
 git clone https://github.com/ebowwa/iOSTestingGym.git
 cd iOSTestingGym
-
-# Open in Xcode
 open iosAppTester.xcodeproj
 ```
 
-### Setup
-1. Build and run the app in Xcode (`Cmd+R`)
-2. Grant accessibility permissions when prompted
-3. Enable iPhone Mirroring:
-   - Open iPhone Mirroring from Applications or Spotlight
-   - Sign in with your Apple ID
-   - Select your iPhone
-4. The app will detect the iPhone Mirroring window automatically
+1. Build and run (`Cmd+R`)
+2. Grant permissions when prompted
+3. Open iPhone Mirroring
+4. Start automating!
 
-### Required Permissions
-- **Accessibility**: System Settings > Privacy & Security > Accessibility
-- **Screen Recording**: System Settings > Privacy & Security > Screen Recording
-
-The app will prompt for these permissions on first launch.
+➡️ [Detailed setup guide](docs/IMPLEMENTATION.md)
 
 
-## 📦 Project Structure
-
-```
-iosAppTester/
-├── Models/           # Core automation logic
-│   ├── ActionRecorder.swift      # Recording/replay system
-│   ├── iPhoneAutomation.swift    # iPhone Mirroring control
-│   └── ScreenshotManager.swift   # Screenshot capture
-├── Views/            # SwiftUI interface
-├── QuickActions/     # One-click automation actions
-├── Mathematics/      # Mathematical components (future integration)
-└── docs/            # Documentation
-    ├── ARCHITECTURE.md         # System architecture
-    ├── RECORD_REPLAY_VISION.md # Record/replay roadmap
-    ├── TECHNICAL.md           # Mathematical framework
-    └── VISION.md             # Future vision & roadmap
-```
 
 ## 📝 Documentation
 
-- [FEATURES.md](docs/FEATURES.md) - Complete feature list and capabilities
-- [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) - Technical implementation details
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - System architecture and design
-- [TECHNICAL.md](docs/TECHNICAL.md) - Mathematical components framework
-- [VISION.md](docs/VISION.md) - Future roadmap and RL integration
-- [RECORD_REPLAY_VISION.md](docs/RECORD_REPLAY_VISION.md) - Advanced automation roadmap
-- [iOS_AUTOMATION_LIMITATIONS.md](docs/iOS_AUTOMATION_LIMITATIONS.md) - Platform limitations
+- [Features](docs/FEATURES.md) - What it can do
+- [Implementation](docs/IMPLEMENTATION.md) - How it works
+- [Architecture](docs/ARCHITECTURE.md) - System design
+- [Vision](docs/VISION.md) - Where it's going
 
 ## 🤝 Contributing
 
-Contributions are welcome! Key areas:
-- Improving record/replay functionality
-- Adding new Quick Actions
-- OpenAI Gym environment wrapper (see [VISION.md](docs/VISION.md))
-- Hardware HID controller development
-
-Please open an issue to discuss major changes.
+Contributions welcome! Open an issue to discuss your ideas.
 
 ## 📜 License
 
